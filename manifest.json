@@ -1,0 +1,21 @@
+{
+    "manifest_version": 2,
+    "name": "Informly",
+    "version": "0.1",
+    "description": "Grammerly for misinformation. Social Media Labs Misinformation Hackathon 2023 Entry",
+    "content_scripts":[
+        {
+            "matches": ["*://*.reddit.com/*"],
+            "js": ["main.js", "bootstrap.bundle.min.js"],
+            "css": ["bootstrap.min.css"]
+        }
+    ],
+    "web_accessible_resources": [
+        "templates/informly_button.html"
+    ],
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "informly@ca.ualberta"
+        }
+    }
+}
