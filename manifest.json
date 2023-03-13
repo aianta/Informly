@@ -6,16 +6,21 @@
     "content_scripts":[
         {
             "matches": ["*://*.reddit.com/*"],
-            "js": ["main.js", "bootstrap.bundle.min.js"],
-            "css": ["bootstrap.min.css"]
+            "js": ["main.js"],
+            "css": ["informly-styles.css"]
         }
     ],
     "web_accessible_resources": [
-        "templates/informly_button.html"
+        "templates/informly_button.html",
+        "templates/informly_check_info.html"
     ],
     "browser_specific_settings": {
         "gecko": {
             "id": "informly@ca.ualberta"
         }
-    }
+    },
+    "permissions": [
+        "*://api.openai.com/v1/*",
+        "webRequest"
+    ]
 }
