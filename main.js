@@ -94,7 +94,8 @@ function handleTextboxInput(event, options){
             // set a timeout to send the comment to chat gpt after a preset delay
             // _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), options._input_timeout)
             _INFORMLY_CHATGPT_TIMEOUT = setTimeout(
-                ()=>logic.preProcessInput(event.target.textContent)
+                ()=>createMisinfoRecord(event.target.textContent, event, options)
+                    .then(result=>logic.preProcessInput(result))
                     .then(result=>logic.isRelevant(result))
                     .then(result=>result.isRelevant?logic.chatGPTCheck(result):Promise.reject('Text not relevant'))
                     .then(result=>result.chatGPTResponse?logic.chatGPTResponseClassifier(result):Promise.reject('No chatgpt response'))
@@ -117,7 +118,22 @@ var sent = false
  * each blue diamond and green rectangle corresponds with a function you can customize here.
  */
 let logic = {
+    /**
+     * This is passed the event emitted by key up. The task of this function 
+     * is to determine if the event was emitted from a textbox that informly 
+     * should be invoked for. 
+     * 
+     * Expected return value: true/false
+     */
     isInformlyTarget: alwaysTrue,
+    /**
+     * This function is given a pre-processed input object, and must determine 
+     * if the kind of text/preprocessing artifacts extracted, warrent misinformation checking.
+     * 
+     * For example, comments that are expressions of personal opinion shouldn't be checked for misinformation.
+     * 
+     * Expected return value: A resolved promise containing the input object ammended with an input.isRelevant flag.
+     */
     isRelevant: dummyRelevanceCheck,
     chatGPTResponseClassifier: simpleClassifier,
     preProcessInput: dummyPreProcess,
@@ -139,15 +155,11 @@ function passthrough(input){
 }
 
 /**
- * Expect raw text, create input object
- * 
- * Need to produce input.originalText
+ * Do something to the input before processing
  * @param {*} input 
  * @returns 
  */
-function dummyPreProcess(inputText){
-    let input = {}
-    input.originalText = inputText
+function dummyPreProcess(input){
     return Promise.resolve(input)
 }
 
@@ -223,13 +235,66 @@ function basicChatGPTCheck(input){
 }
 
 
+function persist(input, options){
+    //TODO parse booleans/store bool values in options
+    options._allow_negative_samples = true
+    options._allow_positive_samples = true
+
+    if((input.isMisinfo && options._allow_positive_samples)
+        || (!input.isMisinfo && options._allow_negative_samples)
+    ){
+        return browser.storage.local.get('records').then(
+            result=>{
+                if(result['records'] === undefined){
+                    dataset = []
+                    dataset.push(input)
+                    return Promise.resolve(dataset)
+                }else{
+                    console.log('browser.storage.local.records: ', result)
+                    result['records'].push(input)
+                    return Promise.resolve(result)
+                }
+            }
+        ).then(records=>browser.storage.local.set({records}))
+        .then(()=>{
+            console.log("Record saved!")
+            return Promise.resolve(input)
+        })
+    }
+
+    return Promise.resolve(input)
+}
+
+function createMisinfoRecord(inputText, event, options){
+
+    let misinfoRecord = {}
+    misinfoRecord.originalText = inputText
+    misinfoRecord.id = uuidv4()
+    misinfoRecord.timestamp = Date.now()
+    misinfoRecord.isMisinfo = undefined
+    misinfoRecord.byUserIsMisinfo = undefined
+    misinfoRecord.originUrl = window.location.href
+    misinfoRecord.byUserSourceUrl = undefined
+    misinfoRecord.isRelevant = undefined
+    misinfoRecord.chatGPTResponse = undefined
+    misinfoRecord.geographicRegion = options._geographic_region
+    
+
+    return Promise.resolve(misinfoRecord)
+}
+
+
 
 // UTILITY FUNCTIONS
 
-function persist(input){
-    //TODO
-    return Promise.resolve(input)
+// Shamelessly taken from:
+// https://stackoverflow.com/questions/105034/how-do-i-create-a-guid-uuid
+function uuidv4() {
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
 }
+
 
 // Returns the informly info container if it is in the DOM.
 function getInformlyInfoElement(){
