@@ -17,7 +17,7 @@ optionMap.set('_allow_positive_samples', true) //TODO: change to false
 optionMap.set('_geographic_region', 'na')
 
 //Fetch the extension options
-function loadOptions(){
+function loadoptions(){
     const options = {}
 
     const optionPromises = []
@@ -33,57 +33,60 @@ function loadOptions(){
 }
 
 
-loadOptions().then(options=>{
-    const OPTIONS = options
-    
+loadoptions().then(options=>{
     //SETUP EVENT LISTENERS
 
     //Detect typing in a textbox.
-    document.addEventListener('keyup', (event)=>{
-        console.log('event.target: ', event.target, 'key', event.key, ' text content: ', event.target.textContent)
-        
-        // If more typing occurs, clear the timeout if it has been defined.
-        if (_INFORMLY_CHATGPT_TIMEOUT !== undefined){
-            clearTimeout(_INFORMLY_CHATGPT_TIMEOUT)
-        }
+    document.addEventListener('keyup', (event)=>handleTextboxInput(event, options))
 
-        //If we haven't sent this comment before, set a time out to do so.
-        if(!sent){
-            // set a timeout to send the comment to chat gpt after a preset delay
-            _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), OPTIONS._input_timeout)
-        }
-    })
-
-    
     // Register listener for 'informly-show', triggered when a user hovers over higlighted misinformation.
-    document.addEventListener('informly-show', (event)=>{
+    document.addEventListener('informly-show', (event)=>handleInformlyShow(event, options))
 
-        //Reset hide timeout if the mouse is over the text again.
-        if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
-            clearTimeout(_INFORMLY_HIDE_INFO_TIMEOUT)
-        }
-
-        console.log("informly SHOW!", event)
-        showInformlyInfo()
-    })
-
-    document.addEventListener('informly-hide', (event)=>{
-        console.log("informly HIDE!", event)
-    
-        if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
-            clearTimeout(_INFORMLY_HIDE_INFO_TIMEOUT)
-        }
-    
-        _INFORMLY_HIDE_INFO_TIMEOUT = setTimeout(()=>{
-            hideInformlyInfo()
-        }, OPTIONS._fade_timeout)
-    
-    })
+    // Register listener for 'informly-hide', triggered when a user moves the mouse off the informly box.
+    document.addEventListener('informly-hide', (event)=>handleInformlyHide(event, options))
 
     console.log('Informly loaded!')
 
 })
 
+function handleInformlyHide(event, options){
+    console.log("informly HIDE!", event)
+    
+    // Reset Timeout
+    if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
+        clearTimeout(_INFORMLY_HIDE_INFO_TIMEOUT)
+    }
+
+    //Set a timeout, afterwhich hide the informly box
+    _INFORMLY_HIDE_INFO_TIMEOUT = setTimeout(()=>hideInformlyInfo(), options._fade_timeout)
+}
+
+
+function handleInformlyShow(event, options){
+
+    //Reset hide timeout if the mouse is over the text again.
+    if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
+        clearTimeout(_INFORMLY_HIDE_INFO_TIMEOUT)
+    }
+
+    console.log("informly SHOW!", event)
+    showInformlyInfo()
+}
+
+function handleTextboxInput(event, options){
+    console.log('event.target: ', event.target, 'key', event.key, ' text content: ', event.target.textContent)
+        
+    // If more typing occurs, clear the timeout if it has been defined.
+    if (_INFORMLY_CHATGPT_TIMEOUT !== undefined){
+        clearTimeout(_INFORMLY_CHATGPT_TIMEOUT)
+    }
+
+    //If we haven't sent this comment before, set a time out to do so.
+    if(!sent){
+        // set a timeout to send the comment to chat gpt after a preset delay
+        _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), options._input_timeout)
+    }
+}
 
 var sent = false
 
@@ -129,7 +132,7 @@ function _informly_isRedditCommentBox(target){
 
 //v1 completions wrapper
 function completionWrapperV1(content){
-    let prompt = OPTIONS._prompt_prefix + content
+    let prompt = options._prompt_prefix + content
     let result = {
         "model": "gpt-3.5-turbo-0301",
         "messages": [{"role": "user", "content": prompt}],
@@ -158,7 +161,7 @@ async function postData(url = "", data = {}) {
         headers: {
         "Content-Type": "application/json",
         "OpenAI-Organization": "org-qRCRUPAKr7f9yoyNSQMZz1VG",
-        "Authorization": "Bearer " + OPTIONS._openai_key
+        "Authorization": "Bearer " + options._openai_key
         },
             body: JSON.stringify(data), // body data type must match "Content-Type" header
         });
@@ -171,7 +174,7 @@ async function postData(url = "", data = {}) {
   }
 
 function sendToChatGPT(content){
-    var response = postData(OPTIONS._openai_url, completionWrapperV1(content))
+    var response = postData(options._openai_url, completionWrapperV1(content))
     console.log(response)
     sent = true
     return response
