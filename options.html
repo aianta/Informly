@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+        p{
+            margin:0;
+            color: #9f9f9f
+        }
+
+        .option-entry{
+            margin-bottom: 15px;
+        }
+    </style>
+  </head>
+
+  <body>
+    <form>
+        <div class="option-entry">
+            <label for="openai-key">OpenAI API Key:</label>
+            <input type="text" id="openai-key" name="openai-key" />
+        </div>
+        <div class="option-entry">
+            <label for="openai-url">OpenAI API Base URL:</label>
+            <input type="text" id="openai-url" name="openai-url" />
+        </div>
+        <div class="option-entry">
+            <label for="prompt-prefix">Prompt Prefix:</label>
+            <input type="text" id="prompt-prefix" name="prompt-prefix" />
+            <p>This prefix is added to parts/all of your comment content to prompt chatGPT to determine if it contains misinformation. This should probably not be an option in any real implementation of informly.</p>
+        </div>
+        <div class="option-entry">
+            <label for="input-timeout">Delay before scan:</label>
+            <input type="number" id="input-timeout" name="input-timeout" />
+            <p>This is how long (in milliseconds) Informly will wait after your last keystroke before pre-processing your comment.</p>
+        </div>
+        <div class="option-entry">
+            <label for="fade-timeout">Delay before Informly Box fade:</label>
+            <input type="number" id="fade-timeout" name="fade-timeout" />
+            <p>This is how long (in milliseconds) Informly will wait after you move your mouse off the Informly box before hiding the box.</p>
+        </div>
+        <div class="option-entry">
+            <label for="allow-negative-samples">Send negative samples:</label>
+            <select name="allow-negative-samples" id="allow-negative-samples">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+            <p>If yes, Informly will record instances when input was found* not to contain misinformation. This helps researchers create datasets for studying misinformation. (*According to chatGPT)</p>
+        </div>
+        <div class="option-entry">
+            <label for="allow-positive-samples">Send positive samples:</label>
+            <select name="allow-positive-samples" id="allow-positive-samples">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+            <p>If yes, Informly will record instances when input was found* to contain misinformation. This helps researchers create datasets for studying misinformation. (*According to chatGPT)</p>
+        </div>
+        <div class="option-entry">
+            <label for="geographic">Select your continent:</label>
+            <select name="geographic" id="geographic">
+                <option value="asia">Asia</option>
+                <option value="na">North America</option>
+                <option value="sa">South America</option>
+                <option value="antartica">Antartica</option>
+                <option value="europe">Europe</option>
+                <option value="oceania">Oceania</option>
+                <option value="null">None/Prefer not to say.</option>
+            </select>
+            <p>This helps researchers create datasets for studying misinformation. Specifically where misinformation is spreading geographically.</p>
+        </div>
+
+
+      <button type="submit">Save</button>
+    </form>
+    <script src="options.js"></script>
+  </body>
+</html>

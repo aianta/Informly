@@ -2,7 +2,7 @@
     "manifest_version": 2,
     "name": "Informly",
     "version": "0.1",
-    "description": "Grammerly for misinformation. Social Media Labs Misinformation Hackathon 2023 Entry",
+    "description": "Grammarly for misinformation. Social Media Labs Misinformation Hackathon 2023 Entry",
     "content_scripts":[
         {
             "matches": ["*://*.reddit.com/*"],
@@ -21,6 +21,12 @@
     },
     "permissions": [
         "*://api.openai.com/v1/*",
-        "webRequest"
-    ]
+        "webRequest",
+        "storage"
+    ],
+    "options_ui":{
+        "page": "options.html",
+        "browser_style": true,
+        "chrome_style": true
+    }
 }

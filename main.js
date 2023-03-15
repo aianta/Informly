@@ -1,16 +1,88 @@
-const _INFORMLY_PROMPT_HEADER = "Does the following comment contain misinformation: "
-const _INFORMLY_OPENAI_COMPLETIONS_BASE_URL = "https://api.openai.com/v1/chat/completions"
-const _INFORMLY_OPENAI_API_KEY = ""
-
 const _INFORMLY_INFO_TEMPLATE_URL = browser.runtime.getURL('templates/informly_check_info.html')
-
-//DEFINE DELAYS
-const _INFORMLY_TIMEOUT_DELAY = 5000
-const _INFORMLY_TIMEOUT_HIDE_INFO_DELAY = 2000
 
 //DEFINE TIMEOUTS
 var _INFORMLY_CHATGPT_TIMEOUT
 var _INFORMLY_HIDE_INFO_TIMEOUT
+
+
+// Define an option map of default values to use in case of undefined.
+const optionMap = new Map()
+optionMap.set('_openai_key', '')
+optionMap.set('_openai_url','https://api.openai.com/v1/chat/completions')
+optionMap.set('_prompt_prefix', 'Does the following comment contain misinformation: ')
+optionMap.set('_input_timeout', 5000)
+optionMap.set('_fade_timeout', 2000)
+optionMap.set('_allow_negative_samples', true) //TODO: change to false
+optionMap.set('_allow_positive_samples', true) //TODO: change to false
+optionMap.set('_geographic_region', 'na')
+
+//Fetch the extension options
+function loadOptions(){
+    const options = {}
+
+    const optionPromises = []
+
+    for(let key of optionMap.keys()){
+        optionPromises.push(browser.storage.sync.get(key).then(result=>options[key]=result[key]))
+    }
+    
+    return Promise.all(optionPromises).then(()=>{
+        console.log('loaded everything', options)
+        return options
+    })
+}
+
+
+loadOptions().then(options=>{
+    const OPTIONS = options
+    
+    //SETUP EVENT LISTENERS
+
+    //Detect typing in a textbox.
+    document.addEventListener('keyup', (event)=>{
+        console.log('event.target: ', event.target, 'key', event.key, ' text content: ', event.target.textContent)
+        
+        // If more typing occurs, clear the timeout if it has been defined.
+        if (_INFORMLY_CHATGPT_TIMEOUT !== undefined){
+            clearTimeout(_INFORMLY_CHATGPT_TIMEOUT)
+        }
+
+        //If we haven't sent this comment before, set a time out to do so.
+        if(!sent){
+            // set a timeout to send the comment to chat gpt after a preset delay
+            _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), OPTIONS._input_timeout)
+        }
+    })
+
+    
+    // Register listener for 'informly-show', triggered when a user hovers over higlighted misinformation.
+    document.addEventListener('informly-show', (event)=>{
+
+        //Reset hide timeout if the mouse is over the text again.
+        if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
+            clearTimeout(_INFORMLY_HIDE_INFO_TIMEOUT)
+        }
+
+        console.log("informly SHOW!", event)
+        showInformlyInfo()
+    })
+
+    document.addEventListener('informly-hide', (event)=>{
+        console.log("informly HIDE!", event)
+    
+        if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
+            clearTimeout(_INFORMLY_HIDE_INFO_TIMEOUT)
+        }
+    
+        _INFORMLY_HIDE_INFO_TIMEOUT = setTimeout(()=>{
+            hideInformlyInfo()
+        }, OPTIONS._fade_timeout)
+    
+    })
+
+    console.log('Informly loaded!')
+
+})
 
 
 var sent = false
@@ -57,7 +129,7 @@ function _informly_isRedditCommentBox(target){
 
 //v1 completions wrapper
 function completionWrapperV1(content){
-    let prompt = _INFORMLY_PROMPT_HEADER + content
+    let prompt = OPTIONS._prompt_prefix + content
     let result = {
         "model": "gpt-3.5-turbo-0301",
         "messages": [{"role": "user", "content": prompt}],
@@ -86,7 +158,7 @@ async function postData(url = "", data = {}) {
         headers: {
         "Content-Type": "application/json",
         "OpenAI-Organization": "org-qRCRUPAKr7f9yoyNSQMZz1VG",
-        "Authorization": "Bearer " + _INFORMLY_OPENAI_API_KEY
+        "Authorization": "Bearer " + OPTIONS._openai_key
         },
             body: JSON.stringify(data), // body data type must match "Content-Type" header
         });
@@ -99,7 +171,7 @@ async function postData(url = "", data = {}) {
   }
 
 function sendToChatGPT(content){
-    var response = postData(_INFORMLY_OPENAI_COMPLETIONS_BASE_URL, completionWrapperV1(content))
+    var response = postData(OPTIONS._openai_url, completionWrapperV1(content))
     console.log(response)
     sent = true
     return response
@@ -133,45 +205,7 @@ async function triggerCheck(target){
     }
 }
 
-console.log('Informly loaded!')
 
-document.addEventListener('informly-hide', (event)=>{
-    console.log("informly HIDE!", event)
 
-    if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
-        clearTimeout(_INFORMLY_HIDE_INFO_TIMEOUT)
-    }
 
-    _INFORMLY_HIDE_INFO_TIMEOUT = setTimeout(()=>{
-        hideInformlyInfo()
-    }, _INFORMLY_TIMEOUT_HIDE_INFO_DELAY)
 
-})
-
-// Register listener for 'informly-show', triggered when a user hovers over higlighted misinformation.
-document.addEventListener('informly-show', (event)=>{
-
-    //Reset hide timeout if the mouse is over the text again.
-    if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
-        clearTimeout(_INFORMLY_HIDE_INFO_TIMEOUT)
-    }
-
-    console.log("informly SHOW!", event)
-    showInformlyInfo()
-})
-
-//Detect typing in a textbox.
-document.addEventListener('keyup', (event)=>{
-    console.log('event.target: ', event.target, 'key', event.key, ' text content: ', event.target.textContent)
-    
-    // If more typing occurs, clear the timeout if it has been defined.
-    if (_INFORMLY_CHATGPT_TIMEOUT !== undefined){
-        clearTimeout(_INFORMLY_CHATGPT_TIMEOUT)
-    }
-
-    //If we haven't sent this comment before, set a time out to do so.
-    if(!sent){
-        // set a timeout to send the comment to chat gpt after a preset delay
-        _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), _INFORMLY_TIMEOUT_DELAY)
-    }
-})
