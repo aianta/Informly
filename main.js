@@ -32,8 +32,9 @@ function loadoptions(){
     })
 }
 
-
 loadoptions().then(options=>{
+
+
     //SETUP EVENT LISTENERS
 
     //Detect typing in a textbox.
@@ -48,6 +49,8 @@ loadoptions().then(options=>{
     console.log('Informly loaded!')
 
 })
+
+// HANDLERS
 
 function handleInformlyHide(event, options){
     console.log("informly HIDE!", event)
@@ -74,21 +77,159 @@ function handleInformlyShow(event, options){
 }
 
 function handleTextboxInput(event, options){
-    console.log('event.target: ', event.target, 'key', event.key, ' text content: ', event.target.textContent)
+
+    // Only do something if text is being entered into a textbox that is an informly target.
+    if (logic.isInformlyTarget(event)){
+
+        console.log('event.target: ', event.target, 'key', event.key, ' text content: ', event.target.textContent)
         
-    // If more typing occurs, clear the timeout if it has been defined.
-    if (_INFORMLY_CHATGPT_TIMEOUT !== undefined){
-        clearTimeout(_INFORMLY_CHATGPT_TIMEOUT)
+        // If more typing occurs, clear the timeout if it has been defined.
+        if (_INFORMLY_CHATGPT_TIMEOUT !== undefined){
+            clearTimeout(_INFORMLY_CHATGPT_TIMEOUT)
+        }
+    
+        //If we haven't sent this before. Use this to avoid, accidental overuse of API
+        if(!sent){
+    
+            // set a timeout to send the comment to chat gpt after a preset delay
+            // _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), options._input_timeout)
+            _INFORMLY_CHATGPT_TIMEOUT = setTimeout(
+                ()=>logic.preProcessInput(event.target.textContent)
+                    .then(result=>logic.isRelevant(result))
+                    .then(result=>result.isRelevant?logic.chatGPTCheck(result):Promise.reject('Text not relevant'))
+                    .then(result=>result.chatGPTResponse?logic.chatGPTResponseClassifier(result):Promise.reject('No chatgpt response'))
+                    .then(result=>persist(result, event))
+                    .then(result=>result.isMisinfo?logic.highlightText(result, event):Promise.reject('Misinfo classification missing'))
+                    .catch(reason=>console.log(reason))
+                , options._input_timeout)
+        }
+
     }
 
-    //If we haven't sent this comment before, set a time out to do so.
-    if(!sent){
-        // set a timeout to send the comment to chat gpt after a preset delay
-        _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), options._input_timeout)
-    }
+
 }
 
 var sent = false
+
+/**
+ * ASSEMBLE EXTENSION LOGIC HERE
+ * Following the Comment Verification Flow (see README), 
+ * each blue diamond and green rectangle corresponds with a function you can customize here.
+ */
+let logic = {
+    isInformlyTarget: alwaysTrue,
+    isRelevant: dummyRelevanceCheck,
+    chatGPTResponseClassifier: simpleClassifier,
+    preProcessInput: dummyPreProcess,
+    chatGPTCheck: dummyChatGPTCheck,
+    highlightText: simpleHighlightText
+}
+
+// LOGIC IMPLEMENTATIONS
+
+
+// For debugging predicates
+function alwaysTrue(event){
+    return true
+}
+
+// For debugging logic
+function passthrough(input){
+    return input
+}
+
+/**
+ * Expect raw text, create input object
+ * 
+ * Need to produce input.originalText
+ * @param {*} input 
+ * @returns 
+ */
+function dummyPreProcess(inputText){
+    let input = {}
+    input.originalText = inputText
+    return Promise.resolve(input)
+}
+
+/**
+ * Need to produce input.isRelevant
+ * @param {*} input 
+ * @returns 
+ */
+function dummyRelevanceCheck(input){
+    input.isRelevant = true
+    return Promise.resolve(input)
+}
+
+/**
+ * Expect input.chatGPTResponse to be output from chatGPT 
+ * 
+ * Highlights entire comment
+ * @param {*} input 
+ * @param {*} event 
+ */
+function simpleHighlightText(input, event){
+    let originalText = event.target.textContent
+    let commentElement = fetchElementWithText(originalText)
+    commentElement.innerHTML = "<span onmouseover='document.dispatchEvent(new CustomEvent(\"informly-show\"))' style='background-color: yellow; text-decoration-line: underline; text-decoration-color: red; text-decoration-style: wavy'>"+originalText+"</span>"
+    console.log("UPDATED HTML")
+
+    buildInformlyInfo(input.chatGPTResponse).then(fragment=>commentElement.parentElement.appendChild(fragment))
+
+}
+
+/**
+ * Expect input.chatGPTResponse to be output from chatGPT
+ * 
+ * Need to return input.isMisinfo
+ * @param {*} input 
+ * @returns 
+ */
+function simpleClassifier(input){
+    if(input.chatGPTResponse.includes('contains misinformation')){
+        input.isMisinfo = true
+    }else{
+        input.isMisinfo = false
+    }
+
+    return Promise.resolve(input)
+}
+
+/**
+ * Need to return input.chatGPTResponse
+ * @param {*} input 
+ * @returns 
+ */
+function dummyChatGPTCheck(input){
+    input.chatGPTResponse = "contains misinformation"
+    return Promise.resolve(input)
+}
+
+/**
+ * Expect input.isRelevant flag to be set
+ * Expect content to send to chatGPT in input.textToCheck
+ * 
+ * Need to return input.chatGPTResponse
+ * @param {*} input 
+ */
+function basicChatGPTCheck(input){
+    sent = true //TODO remove this eventually
+    return postData(options._openai_url, completionWrapperV1(input.textToCheck))
+           .then(response=>Promise.resolve(extractChatGPTResponse(response)))
+           .then(response=>{
+                input.chatGPTResponse = response
+                return Promise.resolve(input)
+            })
+}
+
+
+
+// UTILITY FUNCTIONS
+
+function persist(input){
+    //TODO
+    return Promise.resolve(input)
+}
 
 // Returns the informly info container if it is in the DOM.
 function getInformlyInfoElement(){
@@ -107,27 +248,40 @@ function showInformlyInfo(){
     element.style.display = 'block'
 }
 
-async function buildInformlyInfo(content){
-    // Load the template
-    const template_data = await fetch(_INFORMLY_INFO_TEMPLATE_URL)
-    const template_html = await template_data.text()
+// Source: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+// Example POST method implementation:
+function postData(url = "", data = {}) {
+    console.log("Sending request: ", data)
+    try{
+        // Default options are marked with *
+        const response = fetch(url, {
+        method: "POST", // *GET, POST, PUT, DELETE, etc.,
+        headers: {
+        "Content-Type": "application/json",
+        "OpenAI-Organization": "org-qRCRUPAKr7f9yoyNSQMZz1VG", //TODO: add to options
+        "Authorization": "Bearer " + options._openai_key
+        },
+            body: JSON.stringify(data), // body data type must match "Content-Type" header
+        });
+        
+        return response.then(result=>Promise.resolve(result.json())); // parses JSON response into native JavaScript objects
+    }catch(e){
+        console.error(e)
+    }
+    
+  }
 
-    // Inject the content into the template
-    const injected_template_html = template_html.replace("{#TOKEN#}", content)
-
-    var temp = document.createElement('template')
-    temp.innerHTML = injected_template_html
-
-    return temp.content
+// https://stackoverflow.com/questions/3813294/how-to-get-element-by-innertext
+function fetchElementWithText(text){
+    //On reddit.com this is a span.
+    var xpath = "//span[text()='"+text+"']"
+    console.log("xpath: ",xpath)
+    var result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue
+    return result
 }
 
-/**
- * Determines if target is the reddit comment box.
- * @param {*} target possible reddit comment box element
- */
-function _informly_isRedditCommentBox(target){
-    // TODO
-    return true
+function extractChatGPTResponse(response){
+    return response.choices[0].message.content
 }
 
 //v1 completions wrapper
@@ -146,69 +300,15 @@ function completionWrapperV1(content){
     return result
 }
 
-function extractChatGPTResponse(response){
-    return response.choices[0].message.content
+ function buildInformlyInfo(content){
+    // Load the template
+    return fetch(_INFORMLY_INFO_TEMPLATE_URL)
+        .then(template_data=>template_data.text())
+        .then(template_html=>Promise.resolve(template_html.replace("{#TOKEN#}", content)))
+        .then(template=>{
+            var temp = document.createElement('template')
+            temp.innerHTML = template
+
+            return Promise.resolve(temp.content)
+        })
 }
-
-// Source: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-// Example POST method implementation:
-async function postData(url = "", data = {}) {
-    console.log("Sending request: ", data)
-    try{
-        // Default options are marked with *
-        const response = await fetch(url, {
-        method: "POST", // *GET, POST, PUT, DELETE, etc.,
-        headers: {
-        "Content-Type": "application/json",
-        "OpenAI-Organization": "org-qRCRUPAKr7f9yoyNSQMZz1VG",
-        "Authorization": "Bearer " + options._openai_key
-        },
-            body: JSON.stringify(data), // body data type must match "Content-Type" header
-        });
-        
-        return response.json(); // parses JSON response into native JavaScript objects
-    }catch(e){
-        console.error(e)
-    }
-    
-  }
-
-function sendToChatGPT(content){
-    var response = postData(options._openai_url, completionWrapperV1(content))
-    console.log(response)
-    sent = true
-    return response
-}
-
-// https://stackoverflow.com/questions/3813294/how-to-get-element-by-innertext
-function fetchElementWithText(text){
-    //On reddit.com this is a span.
-    var xpath = "//span[text()='"+text+"']"
-    console.log("xpath: ",xpath)
-    var result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue
-    return result
-}
-
-async function triggerCheck(target){
-    const originalText = target.textContent
-//    chatGPTResponse = await sendToChatGPT(target.textContent)
-//    chatGPTResponse = extractChatGPTResponse(chatGPTResponse)
-    chatGPTResponse = 'contains misinformation'
-
-    console.log("bot said:", chatGPTResponse)
-
-    if(chatGPTResponse.includes("contains misinformation")){
-        commentElement = fetchElementWithText(originalText)
-        commentElement.innerHTML = "<span onmouseover='document.dispatchEvent(new CustomEvent(\"informly-show\"))' style='background-color: yellow; text-decoration-line: underline; text-decoration-color: red; text-decoration-style: wavy'>"+originalText+"</span>"
-        console.log("UPDATED HTML")
-
-        const fragment = await buildInformlyInfo(chatGPTResponse)
-        commentElement.parentElement.appendChild(fragment)
-
-    }
-}
-
-
-
-
-
