@@ -344,7 +344,8 @@ function postData(url = "", data = {}) {
 // https://stackoverflow.com/questions/3813294/how-to-get-element-by-innertext
 function fetchElementWithText(text){
     //On reddit.com this is a span.
-    var xpath = "//span[text()='"+text+"']"
+    //TODO fix case where text contains quote.
+    var xpath = "//span[text()=\""+text+"\"]"
     console.log("xpath: ",xpath)
     var result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue
     return result
