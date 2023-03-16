@@ -99,7 +99,7 @@ function handleTextboxInput(event, options){
                     .then(result=>logic.isRelevant(result))
                     .then(result=>result.isRelevant?logic.chatGPTCheck(result):Promise.reject('Text not relevant'))
                     .then(result=>result.chatGPTResponse?logic.chatGPTResponseClassifier(result):Promise.reject('No chatgpt response'))
-                    .then(result=>persist(result, event))
+                    .then(result=>persist(result, options))
                     .then(result=>result.isMisinfo?logic.highlightText(result, event):Promise.reject('Misinfo classification missing'))
                     .catch(reason=>console.log(reason))
                 , options._input_timeout)
@@ -236,26 +236,25 @@ function basicChatGPTCheck(input){
 
 
 function persist(input, options){
-    //TODO parse booleans/store bool values in options
-    options._allow_negative_samples = true
-    options._allow_positive_samples = true
+
 
     if((input.isMisinfo && options._allow_positive_samples)
         || (!input.isMisinfo && options._allow_negative_samples)
     ){
-        return browser.storage.local.get('records').then(
+
+        return browser.storage.local.get('dataset').then(
             result=>{
-                if(result['records'] === undefined){
+                if(result === undefined|| isEmptyObject(result)){
                     dataset = []
                     dataset.push(input)
                     return Promise.resolve(dataset)
                 }else{
                     console.log('browser.storage.local.records: ', result)
-                    result['records'].push(input)
-                    return Promise.resolve(result)
+                    result['dataset'].push(input)
+                    return Promise.resolve(result.dataset)
                 }
             }
-        ).then(records=>browser.storage.local.set({records}))
+        ).then(dataset=>browser.storage.local.set({dataset}))
         .then(()=>{
             console.log("Record saved!")
             return Promise.resolve(input)
@@ -286,6 +285,12 @@ function createMisinfoRecord(inputText, event, options){
 
 
 // UTILITY FUNCTIONS
+//https://stackoverflow.com/questions/679915/how-do-i-test-for-an-empty-javascript-object
+function isEmptyObject(obj){
+    return obj // 👈 null and undefined check
+        && Object.keys(obj).length === 0
+        && Object.getPrototypeOf(obj) === Object.prototype
+}
 
 // Shamelessly taken from:
 // https://stackoverflow.com/questions/105034/how-do-i-create-a-guid-uuid

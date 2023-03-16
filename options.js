@@ -30,7 +30,16 @@ function saveOptions(e){
     let optionsData = {}
 
     for (let [storageKey, htmlId] of optionMap){
-        optionsData[storageKey] = document.querySelector("#"+htmlId).value
+        let optValue = document.querySelector("#"+htmlId).value
+
+        if (optValue === 'true'){
+            optValue = true
+        }
+
+        if (optValue === 'false'){
+            optValue = false
+        }
+        optionsData[storageKey] = optValue
     }
 
     browser.storage.sync.set(optionsData)
