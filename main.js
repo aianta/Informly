@@ -186,7 +186,10 @@ function simpleHighlightText(input, event){
     commentElement.innerHTML = "<span onmouseover='document.dispatchEvent(new CustomEvent(\"informly-show\"))' style='background-color: yellow; text-decoration-line: underline; text-decoration-color: red; text-decoration-style: wavy'>"+originalText+"</span>"
     console.log("UPDATED HTML")
 
-    buildInformlyInfo(input.chatGPTResponse).then(fragment=>commentElement.parentElement.appendChild(fragment))
+    buildInformlyInfo(input.chatGPTResponse).then(fragment=>{
+        document.documentElement.appendChild(fragment)
+        placeElementByTarget(getInformlyInfoElement(), commentElement)
+    })
 
 }
 
@@ -303,18 +306,18 @@ function uuidv4() {
 
 // Returns the informly info container if it is in the DOM.
 function getInformlyInfoElement(){
-    xpath = "//div[@id='informly-info']"
-    element = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
+    const xpath = "//div[@id='informly-info']"
+    const element = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
     return element
 }
 
 function hideInformlyInfo(){
-    element = getInformlyInfoElement()
+    const element = getInformlyInfoElement()
     element.style.display = 'none'
 }
 
 function showInformlyInfo(){
-    element = getInformlyInfoElement()
+    const element = getInformlyInfoElement()
     element.style.display = 'block'
 }
 
@@ -382,4 +385,14 @@ function completionWrapperV1(content){
 
             return Promise.resolve(temp.content)
         })
+}
+
+// Used to place informly box by highlighted text.
+function placeElementByTarget(element, target){
+
+    targetPositionRect = target.getBoundingClientRect()
+
+    element.style.position = 'absolute'
+    element.style.left = targetPositionRect.left + 'px'
+    element.style.top = (targetPositionRect.top + target.offsetHeight + 3 ) + 'px'
 }
