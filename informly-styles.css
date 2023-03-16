@@ -2,12 +2,82 @@
     display:none
 }
 
+h1.informly-heading{
+    font-size: 14pt !important;
+}
+
 .informly-info-container{
     position: absolute;
-    background-color: grey;
-    width: 200px;
-    height: 100px;
-    border: 3px solid black;
+    font-family: Arial, Helvetica, sans-serif;
+    background-color:#ffffffe4;
+    color:#5c4a1f;
+    width: fit-content;
+    min-height: fit-content;
+    max-width: 500px;
+    /* border: 3px solid #f8e975; */
     border-radius: 5px;
     z-index: 1000;
+}
+
+/* DED068 -> slightly darker flax
+*/
+.informly-section{
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.informly-body{
+    background-color: #fcf6c5;
+    max-height: 200px;
+    overflow-y: scroll;
+}
+
+.informly-mb{
+    margin-bottom:10px !important;
+}
+
+.informly-header{
+    background-color: #f8e975;
+    border-bottom: 2px solid #DED068;
+    border-top: 3px solid #f8e975;
+    border-top-right-radius: 5px;
+    border-top-left-radius: 5px;
+    border-left: 3px solid #f8e975;
+    border-right: 3px solid #f8e975;
+}
+
+.informly-footer{
+    background-color: #f8e975;
+    border-top: 2px solid #DED068;
+    flex-direction: column;
+}
+
+.informly-item{
+    margin-bottom: 5px;
+}
+
+.informly-checkbox-container{
+    display: flex;
+}
+
+.informly-checkbox{
+    margin-right: 10px
+}
+
+.informly-submit{
+    background-color: #CCe1AD;
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    cursor: pointer;
+}
+
+.informly-submit:hover{
+    background-color: #BED897 ;
+}
+
+.informly-submit-text{
+    text-align: center;
+    padding: 2px 0;
+    width: 100%;
 }

@@ -6,7 +6,7 @@
     "content_scripts":[
         {
             "matches": ["*://*.reddit.com/*"],
-            "js": ["main.js"],
+            "js": ["raf-ff-fix.js","main.js","fontawesome.js"],
             "css": ["informly-styles.css"]
         }
     ],
