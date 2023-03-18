@@ -12,6 +12,7 @@ class Snippet{
 
 class Zone{
     constructor(misinfoId, index, x, y, width, height){
+        this.misinfoId = misinfoId
         this.id = misinfoId + '-' + index
         this.x = x
         this.y = y
@@ -19,7 +20,7 @@ class Zone{
         this.height = height
 
         let template = document.createElement('template')
-        template.innerHTML = "<div misinfo-id=\""+misinfoId+"\" zone-id=\""+this.id+"\"></div>"
+        template.innerHTML = "<div informly-type=\"zone\" misinfo-id=\""+misinfoId+"\" zone-id=\""+this.id+"\"></div>"
         document.documentElement.appendChild(template.content)
 
         this.element = $('[zone-id="'+this.id+'"]')[0]
@@ -35,6 +36,18 @@ class Zone{
         this.element.style.position = 'absolute'
         this.element.style.top = this.y + 'px'
         this.element.style.left = this.x + 'px'
+        // this.element.style['pointer-events'] = 'none'
+        this.element.onmouseover = ()=>{
+            //Show informly 
+            document.dispatchEvent(new CustomEvent('informly-show', {detail:{
+                misinfoId: this.misinfoId,
+                zoneId: this.id
+            }}))
+            //And get out of the way
+            this.element.style['pointer-events'] = 'none'
+            console.log('fired from function injected by Zone!')
+        }
+            
     }
 }
 
@@ -51,6 +64,10 @@ class Highlight{
 
         //Show zones
         this.zones.forEach(zone=>zone.show())
+    }
+
+    destroy(){
+        this.zones.forEach(zone=>zone.element.remove())
     }
 
     createZone(x,y,width, height){
@@ -146,6 +163,13 @@ class GhostBox{
     }
 
 
+    resetZoneById(zoneId){
+        this.highlights
+            .filter(h=>h.zones.filter(z=>z.id === zoneId).length > 0)
+            [0]
+            .zones.find(z=>z.id === zoneId).element.style['pointer-events'] = 'auto' 
+    }
+
     /**
      * Place the ghostbox underneath the real one at x,y
      */
@@ -158,11 +182,7 @@ class GhostBox{
         this.textbox.style['min-width'] = (this.width - (this.pl + this.pr)) + "px"
         this.textbox.style['max-height'] = (this.height - (this.pt + this.pb)) + "px"
         this.textbox.style['min-height'] = (this.height - (this.pt + this.pb)) + "px"
-        // this.textbox.style['max-width'] = (this.width - 32) + "px"
-        // this.textbox.style['min-width'] = (this.width - 32) + "px"
-        // this.textbox.style['max-height'] = (this.height - 16) + "px"
-        // this.textbox.style['min-height'] = (this.height - 16)+ "px"
-        this.textbox.style['z-index'] = 1000// TODO remove
+        //this.textbox.style['z-index'] = 1000// TODO remove
         this.textbox.style.opacity = 0.25 // TODO remove
     }
 
@@ -209,12 +229,15 @@ class GhostBox{
         this.spans = this.snippets.filter(s=>s.highlight !== undefined)
             .map(s=>$('span[misinfo-id="'+s.misinfoId+'"]')[0])
 
+        this.purgeHighlights()
+
         // For each span, make a highlight object.
         this.highlights = this.spans.map(span=>new Highlight(span))
-
-
     }
 
+    purgeHighlights(){
+        this.highlights.forEach(h=>h.destroy())
+    }
 
 
     handleUserUpdate(newContent, record){

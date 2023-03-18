@@ -1,7 +1,7 @@
-<div id="informly-info" class="informly-info-container" onmouseenter="document.dispatchEvent(new CustomEvent('informly-show'))" onmouseleave="document.dispatchEvent(new CustomEvent('informly-hide'))">
+<div informly-type="informly-info" class="informly-info-container">
     <div id="informly-info-header" class="informly-section informly-header">
         <h1 class="informly-heading">Informly</h1>
-        <i class="fa-regular fa-circle-xmark fa-lg"></i>
+        <i onclick="document.dispatchEvent(new CustomEvent('informly-hide',{detail:{misinfoId: '{#MISINFO_ID#}'}}))" class="fa-regular fa-circle-xmark fa-lg"></i>
     </div>
     <div id="informly-info-body" class="informly-section informly-body">
         <p id="informly-output" class="informly-item">{#TOKEN#}

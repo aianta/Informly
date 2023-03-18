@@ -50,7 +50,7 @@ loadoptions().then(options=>{
     document.addEventListener('informly-show', (event)=>handleInformlyShow(event, options))
 
     // Register listener for 'informly-hide', triggered when a user moves the mouse off the informly box.
-    document.addEventListener('informly-hide', (event)=>handleInformlyHide(event, options))
+    document.addEventListener('informly-hide', (event)=>handleInformlyHide(event, options, ctx))
 
     console.log('Informly loaded!')
 
@@ -58,20 +58,28 @@ loadoptions().then(options=>{
 
 // HANDLERS
 
-function handleInformlyHide(event, options){
+function handleInformlyHide(event, options, ctx){
+
+    const misinfoId = event.detail.misinfoId
+    hideInformlyInfo(misinfoId, ctx)
+
     console.log("informly HIDE!", event)
     
+    return
+
     // Reset Timeout
     if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
         clearTimeout(_INFORMLY_HIDE_INFO_TIMEOUT)
     }
 
     //Set a timeout, afterwhich hide the informly box
-    _INFORMLY_HIDE_INFO_TIMEOUT = setTimeout(()=>hideInformlyInfo(), options._fade_timeout)
+    _INFORMLY_HIDE_INFO_TIMEOUT = setTimeout(()=>hideInformlyInfo(event.detail.misinfoId), //event.detail has the misinfoId
+     options._fade_timeout)
 }
 
 
 function handleInformlyShow(event, options){
+
 
     //Reset hide timeout if the mouse is over the text again.
     if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
@@ -79,7 +87,12 @@ function handleInformlyShow(event, options){
     }
 
     console.log("informly SHOW!", event)
-    showInformlyInfo()
+    const misinfoId = event.explicitOriginalTarget.getAttribute('misinfo-id')
+    const zoneId = event.explicitOriginalTarget.getAttribute('zone-id')
+    
+    //Clear all informly infos (make sure we don't clutter the screen)
+    removeAllInformlyInfosExcept(misinfoId)
+    showInformlyInfo(misinfoId, zoneId) //event.detail.misinfoId has the misinfoId
 }
 
 function handleTextboxInput(event, options, ctx){
@@ -96,7 +109,10 @@ function handleTextboxInput(event, options, ctx){
     
         //If we haven't sent this before. Use this to avoid, accidental overuse of API
         if(!sent||true){
-    
+            
+            //Clear informly infos
+            removeAllInformlyInfos()
+
             // set a timeout to send the comment to chat gpt after a preset delay
             // _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), options._input_timeout)
             _INFORMLY_CHATGPT_TIMEOUT = setTimeout(
@@ -107,7 +123,8 @@ function handleTextboxInput(event, options, ctx){
                     .then(result=>result.isRelevant?logic.chatGPTCheck(result): Promise.reject('Text is not relevant'))
                     .then(result=>result.chatGPTResponse?logic.chatGPTResponseClassifier(result):Promise.reject('No chatgpt response'))
                     .then(result=>persist(result, options))
-                    .then(result=>result.isMisinfo?logic.highlightText(result, event):Promise.reject('Misinfo classification missing'))
+                    .then(result=>result.isMisinfo?injectInformlyInfo(result, event):Promise.reject('Misinfo classification missing'))
+                    .then(result=>logic.highlightText(result, event))
                     .then(result=>updateGhostboxAfter(result, event, ctx))
                     .catch(reason=>console.log(reason))
                 , options._input_timeout)
@@ -181,6 +198,12 @@ function dummyRelevanceCheck(input){
     return Promise.resolve(input)
 }
 
+function injectInformlyInfo(record, event){
+    return buildInformlyInfo(record.chatGPTResponse, record.id).then(fragment=>{
+        document.documentElement.appendChild(fragment)
+    }).then(result=>Promise.resolve(record))
+}
+
 /**
  * Expect input.chatGPTResponse to be output from chatGPT 
  * 
@@ -223,10 +246,7 @@ function simpleHighlightText(input, event){
 
     console.log("UPDATED HTML")
 
-    buildInformlyInfo(input.chatGPTResponse).then(fragment=>{
-        document.documentElement.appendChild(fragment)
-        placeElementByTarget(getInformlyInfoElement(), commentElement)
-    })
+
 
 }
 
@@ -480,19 +500,23 @@ function getHighlight(id){
 }
 
 // Returns the informly info container if it is in the DOM.
-function getInformlyInfoElement(){
-    const xpath = "//div[@id='informly-info']"
+function getInformlyInfoElement(misinfoId){
+    return $('[informly-type="informly-info"][misinfo-id="'+misinfoId+'"]')[0]
+    const xpath = "//div[informly-type='informly-info' and misinfo-id='"+misinfoId+"']"
     const element = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
     return element
 }
 
-function hideInformlyInfo(){
-    const element = getInformlyInfoElement()
+function hideInformlyInfo(misinfoId, ctx){
+    const element = getInformlyInfoElement(misinfoId)
     element.style.display = 'none'
+    ctx.ghostbox.resetZoneById(element.getAttribute('zone-id'))
 }
 
-function showInformlyInfo(){
-    const element = getInformlyInfoElement()
+function showInformlyInfo(misinfoId, zoneId){
+    const element = getInformlyInfoElement(misinfoId)
+    element.setAttribute('zone-id', zoneId)
+    placeElementByTarget(element, getZoneById(zoneId))
     element.style.display = 'block'
 }
 
@@ -518,6 +542,14 @@ function postData(url = "", data = {}) {
     }
     
   }
+
+
+function getZoneById(zoneId){
+    //var xpath = "//div[zone-id=\""+zoneId+"\"]"
+    return $('[zone-id="'+zoneId+'"][informly-type="zone"]')[0]
+    var result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
+    return result
+}
 
 // https://stackoverflow.com/questions/3813294/how-to-get-element-by-innertext
 function fetchElementWithText(text){
@@ -549,15 +581,17 @@ function completionWrapperV1(content){
     return result
 }
 
- function buildInformlyInfo(content){
+ function buildInformlyInfo(content, misinfoId){
     // Load the template
     return fetch(_INFORMLY_INFO_TEMPLATE_URL)
         .then(template_data=>template_data.text())
         .then(template_html=>Promise.resolve(template_html.replace("{#TOKEN#}", content)))
+        .then(template_html=>Promise.resolve(template_html.replace("{#MISINFO_ID#}", misinfoId)))
         .then(template=>{
             var temp = document.createElement('template')
             temp.innerHTML = template
-
+            temp.content.firstChild.setAttribute('misinfo-id', misinfoId )
+            temp.content.firstChild.style['z-index'] = 1001 //sit above highlights
             return Promise.resolve(temp.content)
         })
 }
@@ -608,4 +642,12 @@ function createHighlight(width, height, id){
 
     return highlightElement
 
+}
+
+function removeAllInformlyInfosExcept(misinfoId){
+    $('[informly-type="informly-info"]').remove(e=>e.getAttribute('misinfo-id') !== misinfoId)
+}
+
+function removeAllInformlyInfos(){
+    $('[informly-type="informly-info"]').remove()
 }
