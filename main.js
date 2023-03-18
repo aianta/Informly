@@ -1,7 +1,3 @@
-
-
-
-
 const _INFORMLY_INFO_TEMPLATE_URL = browser.runtime.getURL('templates/informly_check_info.html')
 
 //DEFINE TIMEOUTS
@@ -43,7 +39,6 @@ loadoptions().then(options=>{
     //SETUP EVENT LISTENERS
 
     //Detect typing in a textbox.
-    //TODO: keyup is not a good event for this, if the user holds the key down it will execute early
     document.addEventListener('keydown', (event)=>handleTextboxInput(event, options, ctx))
 
     // Register listener for 'informly-show', triggered when a user hovers over higlighted misinformation.
@@ -99,35 +94,33 @@ function handleTextboxInput(event, options, ctx){
             clearTimeout(_INFORMLY_CHATGPT_TIMEOUT)
         }
     
-        //If we haven't sent this before. Use this to avoid, accidental overuse of API
-        if(!sent||true){
-            
-            //Clear informly infos
-            hideAllInformlyInfos()
 
-            // set a timeout to send the comment to chat gpt after a preset delay
-            // _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), options._input_timeout)
-            _INFORMLY_CHATGPT_TIMEOUT = setTimeout(
-                ()=>createMisinfoRecord(event.target.textContent, event, options)
-                    .then(result=>updateGhostboxBefore(result, event, ctx))
-                    .then(result=>logic.preProcessInput(result))
-                    .then(result=>logic.isRelevant(result))
-                    .then(result=>result.isRelevant?logic.chatGPTCheck(result): Promise.reject('Text is not relevant'))
-                    .then(result=>result.chatGPTResponse?logic.chatGPTResponseClassifier(result):Promise.reject('No chatgpt response'))
-                    .then(result=>persist(result, options))
-                    .then(result=>result.isMisinfo?injectInformlyInfo(result, event):Promise.reject('Misinfo classification missing'))
-                    .then(result=>logic.highlightText(result, event))
-                    .then(result=>updateGhostboxAfter(result, event, ctx))
-                    .catch(reason=>console.log(reason))
-                , options._input_timeout)
-        }
+            
+        //Clear informly infos
+        hideAllInformlyInfos()
+
+        // set a timeout to send the comment to chat gpt after a preset delay
+        // _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), options._input_timeout)
+        _INFORMLY_CHATGPT_TIMEOUT = setTimeout(
+            ()=>createMisinfoRecord(event.target.textContent, event, options)
+                .then(result=>updateGhostboxBefore(result, event, ctx))
+                .then(result=>logic.preProcessInput(result))
+                .then(result=>logic.isRelevant(result))
+                .then(result=>result.isRelevant?logic.chatGPTCheck(result): Promise.reject('Text is not relevant'))
+                .then(result=>result.chatGPTResponse?logic.chatGPTResponseClassifier(result):Promise.reject('No chatgpt response'))
+                .then(result=>persist(result, options))
+                .then(result=>result.isMisinfo?injectInformlyInfo(result, event):Promise.reject('Misinfo classification missing'))
+                .then(result=>logic.highlightText(result, event))
+                .then(result=>updateGhostboxAfter(result, event, ctx))
+                .catch(reason=>console.log(reason))
+            , options._input_timeout)
+    
 
     }
 
 
 }
 
-var sent = false
 
 /**
  * ASSEMBLE EXTENSION LOGIC HERE
@@ -155,7 +148,7 @@ let logic = {
     chatGPTResponseClassifier: simpleClassifier,
     preProcessInput: dummyPreProcess,
     chatGPTCheck: dummyChatGPTCheck,
-    highlightText: simpleHighlightText
+    highlightText: dummyHighlightText
 }
 
 // LOGIC IMPLEMENTATIONS
@@ -190,6 +183,14 @@ function dummyRelevanceCheck(input){
     return Promise.resolve(input)
 }
 
+/**
+ * Inserts the infobox for the current record into the page. 
+ * 
+ * Must return the promise of the record when done
+ * @param {*} record 
+ * @param {*} event 
+ * @returns 
+ */
 function injectInformlyInfo(record, event){
     return buildInformlyInfo(record.chatGPTResponse, record.id).then(fragment=>{
         document.documentElement.appendChild(fragment)
@@ -197,49 +198,15 @@ function injectInformlyInfo(record, event){
 }
 
 /**
- * Expect input.chatGPTResponse to be output from chatGPT 
  * 
- * Highlights entire comment
+ * Highlights trimmed snippets, for debugging
+ * 
  * @param {*} input 
  * @param {*} event 
  */
-function simpleHighlightText(input, event){
+function dummyHighlightText(input, event){
     input.snippet.highlight = input.snippet.text.trim()
-
     return Promise.resolve(input)
-    let originalText = event.target.textContent
-    let commentElement = fetchElementWithText(originalText)
-
-    // let tempTemplate = document.createElement('template')
-    tempTemplate.innerHTML = "<span record-id='"+input.id+
-        "' contenteditable=\"true\" onmouseover='document.dispatchEvent(new CustomEvent(\"informly-show\", "+input.id+
-        "))' style='background-color: yellow; text-decoration-line: underline; text-decoration-color: red; text-decoration-style: wavy'>"+input.textToCheck+
-        "</span><span contenteditable=\"true\"></span>"
-    
-    // event.target.appendChild(tempTemplate.content)
-    
-
-    // commentElement.innerHTML = commentElement.innerHTML.replace(input.textToCheck, 
-    //     "<span record-id='"+input.id+
-    //     "' contenteditable=\"true\" onmouseover='document.dispatchEvent(new CustomEvent(\"informly-show\", "+input.id+
-    //     "))' style='background-color: yellow; text-decoration-line: underline; text-decoration-color: red; text-decoration-style: wavy'>"+input.textToCheck+
-    //     "</span><span contenteditable=\"true\"></span>")
-
-    event.target.selectionStart = event.target.selectionEnd = originalText.length
-    // commentElement.focus()
-    // commentElement.setAttribute('informly-target', 'comment-box-informly')
-    //commentElement.selectionStart = commentElement.selectionEnd = commentElement.value.length
-    //placeCaretAfterNode(commentElement.lastChild)
-    // $('[informly-target="comment-box-informly"]').selectRange(originalText.length)
-    
-    let boundingBox = commentElement.getBoundingClientRect()
-    let highlight = createHighlight(boundingBox.width, boundingBox.height, 'informly-dummy-highlight')
-    placeHighlight(highlight, commentElement)
-
-    console.log("UPDATED HTML")
-
-
-
 }
 
 /**
@@ -268,6 +235,7 @@ function checkTargetRecursively(event,ctx){
 }
 
 /**
+ * For debugging 
  * Expect input.chatGPTResponse to be output from chatGPT
  * 
  * Need to return input.isMisinfo
@@ -285,34 +253,42 @@ function simpleClassifier(input){
 }
 
 /**
- * Need to return input.chatGPTResponse
- * @param {*} input 
+ * For debugging
+ * Need to return record.chatGPTResponse
+ * @param {*} record 
  * @returns 
  */
-function dummyChatGPTCheck(input){
-    input.chatGPTResponse = "contains misinformation"
-    return Promise.resolve(input)
+function dummyChatGPTCheck(record){
+    record.chatGPTResponse = "contains misinformation"
+    return Promise.resolve(record)
 }
 
 /**
- * Expect input.isRelevant flag to be set
- * Expect content to send to chatGPT in input.textToCheck
+ * Expect record.isRelevant flag to be set
+ * Expect content to send to chatGPT in record.textToCheck
  * 
- * Need to return input.chatGPTResponse
- * @param {*} input 
+ * Need to return record.chatGPTResponse
+ * @param {*} record 
  */
-function basicChatGPTCheck(input){
+function basicChatGPTCheck(record){
     sent = true //TODO remove this eventually
-    return postData(options._openai_url, completionWrapperV1(input.textToCheck))
+    return postData(options._openai_url, completionWrapperV1(record.textToCheck))
            .then(response=>Promise.resolve(extractChatGPTResponse(response)))
            .then(response=>{
-                input.chatGPTResponse = response
-                return Promise.resolve(input)
+                record.chatGPTResponse = response
+                return Promise.resolve(record)
             })
 }
 
+/**
+ * Initializes the ghostbox if it doesn't exist, subsequent calls facilitate snippet management.
+ * @param {*} record 
+ * @param {*} event 
+ * @param {*} ctx informly context containing the ghostbox
+ * @returns 
+ */
 function updateGhostboxBefore(record, event, ctx){
-    //let box_position = $('div[data-contents="true"]')[0].getBoundingClientRect()
+
     let box_position = event.target.getBoundingClientRect()
     //If the ghostbox doesn't exist, set it up now
     if (ctx.ghostbox === undefined){
@@ -346,95 +322,15 @@ function updateGhostboxBefore(record, event, ctx){
     return Promise.resolve(record)
 }
 
+/**
+ * After processing is complete, invoke the ghostbox to render appropriate UI elements.
+ * @param {*} record 
+ * @param {*} event 
+ * @param {*} ctx 
+ */
 function updateGhostboxAfter(record, event, ctx){
     console.log('ghostbox After:', ctx.ghostbox)
     ctx.ghostbox.updateContent()
-}
-
-/**
- * Keep track of what text snippets have been processed for a given textbox.
- */
-function precheckBookkeeping(record, event){
-    
-    let informlyId = event.target._informlyId
-    if(informlyId === undefined){ //Bind an _informlyId to the emitting element
-        informlyId = uuidv4()
-        event.target._informlyId = informlyId
-    }
-
-    browser.storage.local.get('scannedTexts').then()
-
-    /**
-     * Building up a 'scannedTexts' object in local storage that looks like this
-     * {
-     *  '<textbox-informly-id>: [<array of text snippets already scanned>]
-     * }
-     * 
-     * The purpose of this is to avoid sending text we already scanned to chatGPT
-     * again. 
-     */
-
-    return browser.storage.local.get('scannedTexts').then(
-        result=>{
-            console.log('got scannedTexts=', result)
-            if(result === undefined || isEmptyObject(result)){
-                let scannedTexts = {}
-                scannedTexts[informlyId] = []
-                scannedTexts[informlyId].unshift(record.originalText)
-                return Promise.resolve(scannedTexts)
-            }else{
-                scannedTexts = result.scannedTexts
-                if (scannedTexts[informlyId] === undefined){
-                    scannedTexts[informlyId] = []
-                    scannedTexts[informlyId].unshift(record.originalText)
-                    record.textToCheck = record.originalText
-                    return Promise.resolve(scannedTexts)
-                }else{
-                    //If we have previous snippets for this text box.
-                    let alreadyScanned = ''
-                    let temp = []
-                    //Go through all of them
-                    while(scannedTexts[informlyId].length > 0){
-                        snippet = scannedTexts[informlyId].pop()
-                        temp.unshift(snippet)
-                        alreadyScanned += snippet
-                        //Checking to see how many of them have remained the same
-                        if (record.originalText.startsWith(alreadyScanned)){
-                            continue
-                        }else{
-                            //What to do if something was removed
-                            console.log('Previously scanned text has been changed! Expected:', alreadyScanned, 'but got: ', record.originalText)
-                            //get back the last successful alreadyScanned by removing the snippet that made the if condition fail.
-                            alreadyScanned = alreadyScanned.substring(0, (alreadyScanned.length - snippet.length))
-                            //Undo the unshift in temp
-                            temp.shift()
-                            //purge (any) other saved snippets for this textbox as we can't rely on them being valid anymore
-                            //https://stackoverflow.com/questions/1232040/how-do-i-empty-an-array-in-javascript
-                            scannedTexts[informlyId].splice(0,scannedTexts[informlyId].length)
-                            
-                            console.log('reverted alreadyScanned:', alreadyScanned, ' reverted temp:', temp)
-
-                            break
-                        }
-                    }
-                    //Reset the result[informlyId] array using temp
-                    scannedTexts[informlyId] = scannedTexts[informlyId].concat(temp)
-
-                    //Determine the new portion of the input and put it in record.textToCheck
-                    record.textToCheck = record.originalText.substring(alreadyScanned.length)
-
-                    console.log('New snippet', record.textToCheck)
-
-                    //Add the new portion of the input as a seen before snippet.
-                    scannedTexts[informlyId].unshift(record.textToCheck)
-                    //Return the updated 'scannedTexts' object to save
-                    return Promise.resolve(scannedTexts) 
-                }
-                
-            }
-        }
-    ).then(scannedTexts=>browser.storage.local.set({scannedTexts}))
-    .then(result=>Promise.resolve(record)) //Pass the record along
 }
 
 
@@ -510,13 +406,8 @@ function uuidv4() {
     );
 }
 
-function getHighlight(id){
-    const xpath = "//div[@id='"+id+"']"
-    const element = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
-    return element
-}
 
-// Returns the informly info container if it is in the DOM.
+// Returns the informly info container with id if it is in the DOM.
 function getInformlyInfoElement(misinfoId){
     return $('[informly-type="informly-info"][misinfo-id="'+misinfoId+'"]')[0]
 }
@@ -559,21 +450,9 @@ function postData(url = "", data = {}) {
 
 
 function getZoneById(zoneId){
-    //var xpath = "//div[zone-id=\""+zoneId+"\"]"
     return $('[zone-id="'+zoneId+'"][informly-type="zone"]')[0]
-    var result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
-    return result
 }
 
-// https://stackoverflow.com/questions/3813294/how-to-get-element-by-innertext
-function fetchElementWithText(text){
-    //On reddit.com this is a span.
-    //TODO fix case where text contains quote.
-    var xpath = "//span[text()=\""+text+"\"]"
-    console.log("xpath: ",xpath)
-    var result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue
-    return result
-}
 
 function extractChatGPTResponse(response){
     return response.choices[0].message.content
@@ -628,35 +507,6 @@ function placeElementByTarget(element, target){
     element.style.top = (targetPositionRect.top + target.offsetHeight + 3 ) + 'px'
 }
 
-//https://stackoverflow.com/questions/15813895/set-cursor-after-span-element-inside-contenteditable-div
-function placeCaretAfterNode(node) {
-    if (typeof window.getSelection != "undefined") {
-        var range = document.createRange();
-        range.setStartAfter(node);
-        range.collapse(true);
-        var selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-    }
-}
-
-function createHighlight(width, height, id){
-    let highlightTemplate = document.createElement("template")
-    highlightTemplate.innerHTML = "<div id=\""+id+"\" onmouseover='document.dispatchEvent(new CustomEvent(\"informly-show\"))'></div>"
-    
-    let highlightElement = highlightTemplate.content
-    document.documentElement.appendChild(highlightElement)
-    highlightElement = getHighlight(id)
-    highlightElement.style.display = 'block'
-    highlightElement.style.backgroundColor = 'yellow'
-    highlightElement.style.opacity = 0.5
-    highlightElement.style.width = width + "px"
-    highlightElement.style.height = height + "px"
-    highlightElement.style['z-index'] = 1000
-
-    return highlightElement
-
-}
 
 function removeAllInformlyInfosExcept(misinfoId){
     $('[informly-type="informly-info"]').remove(e=>e.getAttribute('misinfo-id') !== misinfoId)
