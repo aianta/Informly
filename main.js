@@ -12,6 +12,7 @@ optionMap.set('_openai_url','https://api.openai.com/v1/chat/completions')
 optionMap.set('_prompt_prefix', 'Does the following comment contain misinformation: ')
 optionMap.set('_input_timeout', 5000)
 optionMap.set('_fade_timeout', 2000)
+optionMap.set('_thank_timeout', 2000)
 optionMap.set('_allow_negative_samples', true) //TODO: change to false
 optionMap.set('_allow_positive_samples', true) //TODO: change to false
 optionMap.set('_geographic_region', 'na')
@@ -23,7 +24,9 @@ function loadoptions(){
     const optionPromises = []
 
     for(let key of optionMap.keys()){
-        optionPromises.push(browser.storage.sync.get(key).then(result=>options[key]=result[key]))
+        optionPromises.push(browser.storage.sync.get(key)
+        // Use saved option key or default
+        .then(result=>key in result?options[key]=result[key]:options[key]=optionMap.get(key)))
     }
     
     return Promise.all(optionPromises).then(()=>{
@@ -48,16 +51,92 @@ loadoptions().then(options=>{
     // Register listener for 'informly-hide', triggered when a user moves the mouse off the informly box.
     document.addEventListener('informly-hide', (event)=>handleInformlyHide(event, options, ctx))
 
+    // Register listener for 'informly-show-submit', triggered when a user interacts with any of the inputs on the informly box.
+    document.addEventListener('informly-show-submit', (event)=>handleShowSubmit(event, options, ctx))
+
+    // Register listener for  'informly-submit', triggered when a user clicks submit on the informly box.
+    document.addEventListener('informly-submit', (event)=>handleSubmit(event, options, ctx))
+
     console.log('Informly loaded!')
 
 })
 
 // HANDLERS
 
+function handleSubmit(event, options, ctx){
+
+    //Extract event info and user input
+    const misinfoId = event.detail.misinfoId
+    const urlSource = $('#' + misinfoId + '-url-source').val()
+    const falsePositive = $('#' + misinfoId + '-false-positive-flag').val() === 'on'
+
+    console.log('Got submission for ', misinfoId, ' urlSource:', urlSource, ' falsePositive', falsePositive)
+
+    //Find misinfo record in storage if it exists.
+    browser.storage.local.get('dataset').then(
+        result=>{
+            if(result === undefined|| isEmptyObject(result)){
+                return Promise.reject('No records to update!')
+            }
+
+            // Update the corresponding record
+            const record = result.dataset.find(r=>r.id === misinfoId)
+            if(record){
+                record.byUserSourceUrl = urlSource //Store the url where the user leanred this claim
+                record.byUserIsMisinfo = !falsePositive //Store the user's perspective on whether this is misinfo or not.
+                
+                //Credit the user the appropriate number of bytes
+                return browser.storage.local.get('user').then(result=>{
+                    if (result === undefined || isEmptyObject(result)){
+                        const data = {bytes: record.bytes }
+                        return Promise.resolve(data)
+                    }
+
+                    result.user.bytes += record.bytes
+                    return Promise.resolve(result.user)
+                }).then(user=>browser.storage.local.set({user}))
+                .then(()=>Promise.resolve(result.dataset)) // Resolve the promise with the updated dataset.
+            }
+
+            return Promise.reject('Could not find record for: '+ misinfoId)
+        }
+    ).then(dataset=>browser.storage.local.set({dataset})) //And save the changes in local storage!
+    .then(()=>{
+        //Hide other informly box sections
+        $('#' + misinfoId + '-info-header').css({'display':'none'})
+        $('#' + misinfoId + '-info-body').css({'display':'none'})
+        $('#' + misinfoId + '-info-footer').css({'display':'none'})
+        $('#' + misinfoId + '-submit').css({'display':'none'})
+        //Show thanks splashscreen
+        $('#' + misinfoId + '-thanks').css({'display':'block'})
+
+        console.log("_thank_timeout:", options._thank_timeout  )
+
+        //Disable the corresponding zones
+        ctx.ghostbox.markSubmitted(misinfoId)
+
+        //After a brief delay, destroy the info box
+        setTimeout(()=>{
+            removeInformlyInfoBox(misinfoId)
+        }, options._thank_timeout)
+
+        console.log('handled submit!')
+    })
+
+
+}
+
+function handleShowSubmit(event, options, ctx){
+    const misinfoId = event.detail.misinfoId
+
+    $('#' + misinfoId + '-submit').css({"display": "block"})
+}
+
 function handleInformlyHide(event, options, ctx){
 
     const misinfoId = event.detail.misinfoId
     hideInformlyInfo(misinfoId, ctx)
+    //$('#' + misinfoId + '-submit').css({"display":"none"}) //Re-hide submit button
 
     console.log("informly HIDE!", event)
     
@@ -191,7 +270,7 @@ function dummyRelevanceCheck(input){
  * @returns 
  */
 function injectInformlyInfo(record, event){
-    return buildInformlyInfo(record.chatGPTResponse, record.id).then(fragment=>{
+    return buildInformlyInfo(record.chatGPTResponse, record.id, record.bytes).then(fragment=>{
         document.documentElement.appendChild(fragment)
     }).then(result=>Promise.resolve(record))
 }
@@ -315,8 +394,12 @@ function updateGhostboxBefore(record, event, ctx){
     }
     ctx.ghostbox.place()
 
+    //Define snippet for processing in the pipeline
     record.snippet = ctx.ghostbox.handleUserUpdate(record.originalText, record)
     console.log("record.snippet set to: ", record.snippet)
+
+    //Define the number of bytes the snippet is worth
+    record.bytes = new Blob([record.snippet.text]).size
 
     return Promise.resolve(record)
 }
@@ -382,6 +465,7 @@ function createMisinfoRecord(inputText, event, options){
     misinfoRecord.textToCheck = undefined
     misinfoRecord.chatGPTResponse = undefined
     misinfoRecord.geographicRegion = options._geographic_region
+    misinfoRecord.bytes = undefined
     
 
     return Promise.resolve(misinfoRecord)
@@ -473,12 +557,13 @@ function completionWrapperV1(content){
     return result
 }
 
- function buildInformlyInfo(content, misinfoId){
+ function buildInformlyInfo(content, misinfoId, bytes){
     // Load the template
     return fetch(_INFORMLY_INFO_TEMPLATE_URL)
         .then(template_data=>template_data.text())
         .then(template_html=>Promise.resolve(template_html.replace("{#TOKEN#}", content)))
-        .then(template_html=>Promise.resolve(template_html.replace("{#MISINFO_ID#}", misinfoId)))
+        .then(template_html=>Promise.resolve(template_html.replaceAll("{#MISINFO_ID#}", misinfoId)))
+        .then(template_html=>Promise.resolve(template_html.replace("{#BYTES#}", bytes)))
         .then(template=>{
             var temp = document.createElement('template')
             temp.innerHTML = template
@@ -511,6 +596,10 @@ function removeAllInformlyInfosExcept(misinfoId){
     $('[informly-type="informly-info"]').remove(e=>e.getAttribute('misinfo-id') !== misinfoId)
 }
 
+function removeInformlyInfoBox(misinfoId){
+    $('[informly-type="informly-info"][misinfo-id="'+misinfoId+'"]').remove()
+}
+
 function hideAllInformlyInfosExcept(misinfoId){
     console.log('hiding all informly infos except for ', misinfoId)
     $('[informly-type="informly-info"][misinfo-id!="'+misinfoId+'"]')
@@ -534,7 +623,9 @@ function hideAllInformlyInfos(){
 function hasTextboxRole (element){
     if (element && element.hasAttribute('role') && element.getAttribute('role') === 'textbox'){
         return true
-    }else{
+    }else if(element.parent){
         return hasTextboxRole(element.parent)
+    }else{
+        return false
     }
 }

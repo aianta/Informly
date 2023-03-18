@@ -5,6 +5,11 @@ class Snippet{
         this.text = text
         this.index = index
         this.highlight = undefined
+        this.submitted = false
+    }
+
+    markSubmitted(){
+        this.submitted = true
     }
 
 
@@ -31,6 +36,18 @@ class Zone{
      */
     resetZone(){
         this.element.style['pointer-events'] = 'auto'
+    }
+
+    /**
+     * A submitted zone is one that doesn't trigger any more events, and
+     * uses alternative, less obrusive styling.
+     */
+    markSubmitted(){
+        this.element.style['pointer-events'] = 'none'
+        this.element.style.backgroundColor = 'transparent'
+        this.element.style.border = '1px solid #CCE1AD'
+        this.element.style.borderRadius = '5px'
+        this.element.style.opacity = 0.7
     }
 
     show(){
@@ -73,6 +90,13 @@ class Highlight{
 
         //Show zones
         this.zones.forEach(zone=>zone.show())
+    }
+
+    /**
+     * Marks all zones for this highlight as submitted
+     */
+    markSubmitted(){
+        this.zones.forEach(zone=>zone.markSubmitted())
     }
 
     resetAllZones(){
@@ -179,6 +203,14 @@ class GhostBox{
         this.width = width
     }
 
+    markSubmitted(misinfoId){
+        //Mark highlight submitted
+        this.highlights.find(h=>h.misinfoId === misinfoId)
+        .markSubmitted()
+        //Mark snippet submitted
+        this.snippets.find(s=>s.misinfoId === misinfoId).markSubmitted()
+    }
+
     //Resets all zones except those corresponding to a highlight with misinfoId
     resetAllZonesExcept(misinfoId){
         this.highlights
@@ -227,8 +259,8 @@ class GhostBox{
         let resultHTML = ''
 
         this.snippets.reverse().forEach(snippet=>{
-            // No highlights in this snippet
-            if (snippet.highlight === undefined){
+            // No highlights in this snippet or snippet was submitted
+            if (snippet.highlight === undefined || snippet.submitted === true){
                 //Simply append the snippet text. 
                 resultHTML += snippet.text
             }else{
@@ -248,7 +280,7 @@ class GhostBox{
         this.textbox.innerHTML = resultHTML
 
         // Get the spans we just made
-        this.spans = this.snippets.filter(s=>s.highlight !== undefined)
+        this.spans = this.snippets.filter(s=>s.highlight !== undefined && s.submitted === false)
             .map(s=>$('span[misinfo-id="'+s.misinfoId+'"]')[0])
 
         this.purgeHighlights()

@@ -1,6 +1,4 @@
-#informly-info{
-    display:none
-}
+
 
 h1.informly-heading{
     font-size: 14pt !important;
@@ -14,6 +12,7 @@ h1.informly-heading{
     width: fit-content;
     min-height: fit-content;
     max-width: 500px;
+    min-width: 500px;
     border: 1px solid #5c4a1f; 
     border-radius: 5px;
     z-index: 1000;
@@ -72,6 +71,8 @@ h1.informly-heading{
     border-bottom-left-radius: 5px;
     border-bottom-right-radius: 5px;
     cursor: pointer;
+    text-align: center;
+    display: none; /* Hidden to start. */
 }
 
 .informly-submit:hover{
@@ -82,4 +83,29 @@ h1.informly-heading{
     text-align: center;
     padding: 2px 0;
     width: 100%;
+}
+
+.informly-thanks{
+    background-color: #CCe1AD;
+    color: #97bb5d;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    display:none; /* hidden to start */
+}
+
+.informly-thank-text{
+    margin-top:20px;
+    margin-bottom: 20px;
+    width: 100%;
+    text-align: center;
+    font-weight: 800;
+    font-size: 16pt;
+}
+
+.informly-points{
+    margin-top: 20px;
+    width:100%;
+    text-align: center;
+    font-weight: 800;
 }

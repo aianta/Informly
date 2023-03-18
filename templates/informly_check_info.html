@@ -1,9 +1,9 @@
 <div informly-type="informly-info" class="informly-info-container">
-    <div id="informly-info-header" class="informly-section informly-header">
+    <div id="{#MISINFO_ID#}-info-header" class="informly-section informly-header">
         <h1 class="informly-heading">Informly</h1>
         <i onclick="document.dispatchEvent(new CustomEvent('informly-hide',{detail:{misinfoId: '{#MISINFO_ID#}'}}))" class="fa-regular fa-circle-xmark fa-lg"></i>
     </div>
-    <div id="informly-info-body" class="informly-section informly-body">
+    <div id="{#MISINFO_ID#}-info-body" class="informly-section informly-body">
         <p id="informly-output" class="informly-item">{#TOKEN#}
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam gravida nec urna sed sodales. Nullam ultricies, lectus at facilisis rhoncus, lorem nunc pulvinar sapien, eget posuere nulla dui a ante. Cras accumsan eros imperdiet quam suscipit egestas. Proin sit amet cursus quam, sed vulputate purus. Sed dignissim arcu a dignissim auctor. Sed nec mollis nunc, nec ullamcorper mauris. Quisque id dignissim erat, vel mollis magna. Integer sodales leo metus, sit amet ullamcorper nulla volutpat eget. Mauris eleifend, erat quis placerat pellentesque, magna ex imperdiet ex, ac pharetra nibh est sed purus. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Quisque id dolor nec orci pellentesque aliquet ut ac enim. Vestibulum vel tempus augue. Vestibulum vulputate pharetra risus varius blandit. Curabitur consectetur quam sit amet dapibus posuere.
 
@@ -12,16 +12,22 @@
             Nam vel nisl nec leo blandit laoreet. Maecenas id ex sit amet ligula suscipit dictum. Nam ac est ante. Aenean vitae metus eu mi dapibus hendrerit. Vivamus tincidunt blandit tellus, ut consectetur velit commodo eget. Nullam ullamcorper bibendum pharetra. Etiam a dictum sem. Donec id accumsan ligula, non convallis lorem. Aenean ultricies arcu neque, id ultrices metus aliquam laoreet. Nunc venenatis felis sit amet nisl lacinia bibendum. Curabitur dictum, mauris a condimentum fringilla, odio massa imperdiet leo, eget tempor nunc metus non lacus. Proin posuere nisl in malesuada lobortis. 
         </p>
     </div>
-    <div id="informly-info-footer" class="informly-section informly-footer">
+    <div id="{#MISINFO_ID#}-info-footer" class="informly-section informly-footer">
 
         <p for="url-soruce" id="misinfo-claim" class="informly-item ">Remember where you found this claim?</p>
-        <input class="informly-item informly-mb" type="text" id="informly-url-source" name="url-soruce" placeholder="http://...">
-        <!-- <span class="informly-item informly-button">Submit</span> -->
+        <input class="informly-item informly-mb" type="text" id="{#MISINFO_ID#}-url-source" name="url-soruce" placeholder="http://..." onfocus="document.dispatchEvent(new CustomEvent('informly-show-submit', {detail:{misinfoId:'{#MISINFO_ID#}' }}))">
         <div class="informly-item  informly-checkbox-container">
-            <input type="checkbox" class="informly-checkbox"> Incorrectly flagged as misinformation.
+            <input id="{#MISINFO_ID#}-false-positive-flag" type="checkbox" class="informly-checkbox" onfocus="document.dispatchEvent(new CustomEvent('informly-show-submit', {detail:{misinfoId:'{#MISINFO_ID#}' }}))"> Incorrectly flagged as misinformation.
         </div>
     </div>
-    <div class="informly-section informly-submit">
+    <div id="{#MISINFO_ID#}-submit"  class="informly-section informly-submit" onclick="document.dispatchEvent(new CustomEvent('informly-submit', {detail:{misinfoId: '{#MISINFO_ID#}' }}))">
         <span class="informly-submit-text">Submit</span>
+    </div>
+    <div id="{#MISINFO_ID#}-thanks" class="informly-section informly-thanks">
+        <div class="informly-thank-text">Thanks!</div>
+        <div class="informly-thank-text">
+            <i class="fa-regular fa-face-smile fa-5x"></i>
+        </div>
+        <div class="informly-points">+{#BYTES#} bytes</div>
     </div>
 </div>
