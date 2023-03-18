@@ -42,7 +42,7 @@ loadoptions().then(options=>{
 
     //SETUP EVENT LISTENERS
 
-    //Detect typing in a textbox.
+    // Detect typing in a textbox.
     document.addEventListener('keydown', (event)=>handleTextboxInput(event, options, ctx))
 
     // Register listener for 'informly-show', triggered when a user hovers over higlighted misinformation.
@@ -57,11 +57,39 @@ loadoptions().then(options=>{
     // Register listener for  'informly-submit', triggered when a user clicks submit on the informly box.
     document.addEventListener('informly-submit', (event)=>handleSubmit(event, options, ctx))
 
+    // Register listener for page scrolling, informly needs to move the ghostbox around for things to work properly
+    document.addEventListener('scroll', (event)=>handleScroll(event, options, ctx))
+
     console.log('Informly loaded!')
 
 })
 
 // HANDLERS
+
+function handleScroll(event, options, ctx){
+    if (ctx.ghostbox){ //If a ghostbox has been defined
+        ctx.ghostbox.place()
+
+        console.log('haunter.x', ctx.ghostbox.textbox.getBoundingClientRect().x,
+            'haunter.y', ctx.ghostbox.textbox.getBoundingClientRect().y,
+            'hauntee.x', box_position.x,
+            'hauntee.y', box_position.y
+        )
+    }
+
+    //Move all the informly boxes too!
+    $('[informly-type="informly-info"]')
+        .filter((index, element)=>element.hasAttribute('zone-id'))
+        .each((index,element)=>{
+            // console.log('element:', element)
+            const zoneId = element.getAttribute('zone-id')
+            // console.log('zone-id', zoneId)
+            const zone = getZoneById(element.getAttribute('zone-id'))
+            // console.log('zone', zone)
+            placeElementByTarget(element, getZoneById(element.getAttribute('zone-id')))
+
+        })
+}
 
 function handleSubmit(event, options, ctx){
 
@@ -118,8 +146,8 @@ function handleSubmit(event, options, ctx){
 }
 
 function handleShowSubmit(event, options, ctx){
+    //Reveal the submit button for the appropriate informly box
     const misinfoId = event.detail.misinfoId
-
     $('#' + misinfoId + '-submit').css({"display": "block"})
 }
 
@@ -127,10 +155,7 @@ function handleInformlyHide(event, options, ctx){
 
     const misinfoId = event.detail.misinfoId
     hideInformlyInfo(misinfoId, ctx)
-    //$('#' + misinfoId + '-submit').css({"display":"none"}) //Re-hide submit button
-
     console.log("informly HIDE!", event)
-    
     return
 
 }
@@ -377,7 +402,8 @@ function updateGhostboxBefore(record, event, ctx){
             pt,
             pb,
             pl,
-            pr
+            pr,
+            event.target //the event target gets haunted :) <we use this to update ghostboxes on scroll>
             )
     }else{
         //Sometimes the position or size changes, adjust to that.
@@ -403,7 +429,10 @@ function updateGhostboxBefore(record, event, ctx){
  */
 function updateGhostboxAfter(record, event, ctx){
     console.log('ghostbox After:', ctx.ghostbox)
+
+    ctx.ghostbox.place()
     ctx.ghostbox.updateContent()
+
 }
 
 
@@ -580,7 +609,7 @@ function placeElementByTarget(element, target){
 
     element.style.position = 'absolute'
     element.style.left = targetPositionRect.left + 'px'
-    element.style.top = (targetPositionRect.top + target.offsetHeight + 3 ) + 'px'
+    element.style.top = (window.scrollY + targetPositionRect.top + target.offsetHeight + 3 ) + 'px'
 }
 
 

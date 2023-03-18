@@ -31,6 +31,13 @@ class Zone{
         this.element = $('[zone-id="'+this.id+'"][informly-type="zone"]')[0]
     }
 
+    updatePosition(x,y){
+        this.x = x
+        this.y = y
+        this.element.style.top = this.y + 'px'
+        this.element.style.left = this.x + 'px'
+    }
+
     /**
      * Resets the zone: Re-enables pointer-events so that it can trigger 'informly-show' events.
      */
@@ -75,6 +82,10 @@ class Zone{
         }
             
     }
+
+    destroy(){
+        this.element.remove()
+    }
 }
 
 class Highlight{
@@ -83,13 +94,8 @@ class Highlight{
         this.span = span
         this.zones = []
 
-        //Create highlight zones for each client rectangle in the span.
-        for (let rect of this.span.getClientRects()){
-            this.createZone(rect.x, rect.y, rect.width, rect.height)
-        }
-
-        //Show zones
-        this.zones.forEach(zone=>zone.show())
+        this.createZones()
+        this.showZones()
     }
 
     /**
@@ -111,6 +117,28 @@ class Highlight{
         this.zones.forEach(zone=>zone.element.remove())
     }
 
+    updateZones(){
+        for (const i in this.span.getClientRects()){
+            const rect = this.span.getClientRects().item(i)
+            if (i < this.zones.length){
+                this.zones[i].updatePosition(rect.x + window.scrollX, rect.y + window.scrollY)
+            }
+            
+        }
+    }
+
+    createZones(){
+        //Create highlight zones for each client rectangle in the span.
+        for (let rect of this.span.getClientRects()){
+            this.createZone(rect.x + window.scrollX, rect.y + window.scrollY, rect.width, rect.height)
+        }
+    }
+
+    showZones(){
+        //Show zones
+        this.zones.forEach(zone=>zone.show())
+    }
+
     createZone(x,y,width, height){
         this.zones.push(new Zone(this.misinfoId, this.zones.length, x,y,width, height))
     }
@@ -129,13 +157,15 @@ class GhostBox{
      * @param {*} pb padding bottom to mimic
      * @param {*} pl padding left to mimic
      * @param {*} pr padding right to mimic
+     * @param {*} hauntee the element from the page that this ghostbox haunts
      */
-    constructor( x, y, width, height, font, pt, pb, pl, pr){
+    constructor( x, y, width, height, font, pt, pb, pl, pr, hauntee){
         this.id = uuidv4() //Ghostbox id
         this.width = width
         this.height = height
         this.x = x
         this.y = y
+        this.hauntee = hauntee
 
         //Save parsed numerical values
         this.pt = parsePadding(pt)
@@ -228,6 +258,12 @@ class GhostBox{
      * Place the ghostbox underneath the real one at x,y
      */
     place(){
+        
+        //Account for scrolling
+        const box_position = this.hauntee.getBoundingClientRect()
+        this.setPosition(box_position.x + window.scrollX, box_position.y + window.scrollY, box_position.width, box_position.height)
+        
+
         this.textbox.style.position = 'absolute'
         this.textbox.style.display = 'block'
         this.textbox.style.top = this.y + 'px'
@@ -238,6 +274,9 @@ class GhostBox{
         this.textbox.style['min-height'] = (this.height - (this.pt + this.pb)) + "px"
         //this.textbox.style['z-index'] = 1000// TODO remove
         this.textbox.style.opacity = 0.25 // TODO remove
+
+        //Once we've placed ourselves update the highlights that depends on us
+        this.highlights.forEach(h=>h.updateZones())
     }
 
 
