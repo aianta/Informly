@@ -26,6 +26,13 @@ class Zone{
         this.element = $('[zone-id="'+this.id+'"][informly-type="zone"]')[0]
     }
 
+    /**
+     * Resets the zone: Re-enables pointer-events so that it can trigger 'informly-show' events.
+     */
+    resetZone(){
+        this.element.style['pointer-events'] = 'auto'
+    }
+
     show(){
         this.element.style.display = 'block'
         this.element.style.backgroundColor = 'yellow'
@@ -43,7 +50,9 @@ class Zone{
                 misinfoId: this.misinfoId,
                 zoneId: this.id
             }}))
-            //And get out of the way
+            /** And get out of the way. We disable pointer-events so that uses can click through
+             *  the highlight div and edit the text underneath. 
+             * */
             this.element.style['pointer-events'] = 'none'
             console.log('fired from function injected by Zone!')
         }
@@ -64,6 +73,14 @@ class Highlight{
 
         //Show zones
         this.zones.forEach(zone=>zone.show())
+    }
+
+    resetAllZones(){
+        this.zones.forEach(zone=>zone.resetZone())
+    }
+
+    resetZone(zoneId){
+        this.zones.find(zone=>zone.id === zoneId).resetZone()
     }
 
     destroy(){
@@ -162,12 +179,17 @@ class GhostBox{
         this.width = width
     }
 
+    //Resets all zones except those corresponding to a highlight with misinfoId
+    resetAllZonesExcept(misinfoId){
+        this.highlights
+            .filter(h=>h.misinfoId !== misinfoId)
+            .forEach(h=>h.resetAllZones())
+    }
 
     resetZoneById(zoneId){
         this.highlights
-            .filter(h=>h.zones.filter(z=>z.id === zoneId).length > 0)
-            [0]
-            .zones.find(z=>z.id === zoneId).element.style['pointer-events'] = 'auto' 
+            .find(h=>h.zones.filter(z=>z.id === zoneId).length > 0)
+            .resetZone(zoneId)
     }
 
     /**

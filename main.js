@@ -34,6 +34,7 @@ function loadoptions(){
 
 loadoptions().then(options=>{
 
+    //Create the informly context for the page
     let ctx = {}
 
     //SETUP EVENT LISTENERS
@@ -42,7 +43,7 @@ loadoptions().then(options=>{
     document.addEventListener('keydown', (event)=>handleTextboxInput(event, options, ctx))
 
     // Register listener for 'informly-show', triggered when a user hovers over higlighted misinformation.
-    document.addEventListener('informly-show', (event)=>handleInformlyShow(event, options))
+    document.addEventListener('informly-show', (event)=>handleInformlyShow(event, options, ctx))
 
     // Register listener for 'informly-hide', triggered when a user moves the mouse off the informly box.
     document.addEventListener('informly-hide', (event)=>handleInformlyHide(event, options, ctx))
@@ -65,7 +66,7 @@ function handleInformlyHide(event, options, ctx){
 }
 
 
-function handleInformlyShow(event, options){
+function handleInformlyShow(event, options, ctx){
 
 
     //Reset hide timeout if the mouse is over the text again.
@@ -77,6 +78,8 @@ function handleInformlyShow(event, options){
     const misinfoId = event.explicitOriginalTarget.getAttribute('misinfo-id')
     const zoneId = event.explicitOriginalTarget.getAttribute('zone-id')
     
+
+    ctx.ghostbox.resetAllZonesExcept(misinfoId)
     //Clear all informly infos (make sure we don't clutter the screen)
     hideAllInformlyInfosExcept(misinfoId)
     showInformlyInfo(misinfoId, zoneId) //event.detail.misinfoId has the misinfoId
@@ -114,11 +117,7 @@ function handleTextboxInput(event, options, ctx){
                 .then(result=>updateGhostboxAfter(result, event, ctx))
                 .catch(reason=>console.log(reason))
             , options._input_timeout)
-    
-
     }
-
-
 }
 
 
