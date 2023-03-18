@@ -85,16 +85,7 @@ function handleSubmit(event, options, ctx){
                 record.byUserSourceUrl = urlSource //Store the url where the user leanred this claim
                 record.byUserIsMisinfo = !falsePositive //Store the user's perspective on whether this is misinfo or not.
                 
-                //Credit the user the appropriate number of bytes
-                return browser.storage.local.get('user').then(result=>{
-                    if (result === undefined || isEmptyObject(result)){
-                        const data = {bytes: record.bytes }
-                        return Promise.resolve(data)
-                    }
-
-                    result.user.bytes += record.bytes
-                    return Promise.resolve(result.user)
-                }).then(user=>browser.storage.local.set({user}))
+                return creditBytes(record) //Give the user extra credit for interacting with the informly box
                 .then(()=>Promise.resolve(result.dataset)) // Resolve the promise with the updated dataset.
             }
 
@@ -442,6 +433,7 @@ function persist(input, options){
                 }
             }
         ).then(dataset=>browser.storage.local.set({dataset}))
+        .then(()=>creditBytes(input)) //Give the user some bytes for building a dataset
         .then(()=>{
             console.log("Record saved!")
             return Promise.resolve(input)
@@ -628,4 +620,18 @@ function hasTextboxRole (element){
     }else{
         return false
     }
+}
+
+function creditBytes(record){
+    //Credit the user the appropriate number of bytes
+    return browser.storage.local.get('user').then(result=>{
+        if (result === undefined || isEmptyObject(result)){
+            const data = {bytes: record.bytes }
+            return Promise.resolve(data)
+        }
+
+        result.user.bytes += record.bytes
+        return Promise.resolve(result.user)
+    }).then(user=>browser.storage.local.set({user}))
+    .then(()=>Promise.resolve(record))
 }
