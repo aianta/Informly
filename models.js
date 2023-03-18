@@ -23,7 +23,7 @@ class Zone{
         template.innerHTML = "<div informly-type=\"zone\" misinfo-id=\""+misinfoId+"\" zone-id=\""+this.id+"\"></div>"
         document.documentElement.appendChild(template.content)
 
-        this.element = $('[zone-id="'+this.id+'"]')[0]
+        this.element = $('[zone-id="'+this.id+'"][informly-type="zone"]')[0]
     }
 
     show(){

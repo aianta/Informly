@@ -67,14 +67,6 @@ function handleInformlyHide(event, options, ctx){
     
     return
 
-    // Reset Timeout
-    if(_INFORMLY_HIDE_INFO_TIMEOUT !== undefined){
-        clearTimeout(_INFORMLY_HIDE_INFO_TIMEOUT)
-    }
-
-    //Set a timeout, afterwhich hide the informly box
-    _INFORMLY_HIDE_INFO_TIMEOUT = setTimeout(()=>hideInformlyInfo(event.detail.misinfoId), //event.detail has the misinfoId
-     options._fade_timeout)
 }
 
 
@@ -91,14 +83,14 @@ function handleInformlyShow(event, options){
     const zoneId = event.explicitOriginalTarget.getAttribute('zone-id')
     
     //Clear all informly infos (make sure we don't clutter the screen)
-    removeAllInformlyInfosExcept(misinfoId)
+    hideAllInformlyInfosExcept(misinfoId)
     showInformlyInfo(misinfoId, zoneId) //event.detail.misinfoId has the misinfoId
 }
 
 function handleTextboxInput(event, options, ctx){
 
     // Only do something if text is being entered into a textbox that is an informly target.
-    if (logic.isInformlyTarget(event)){
+    if (logic.isInformlyTarget(event, ctx)){
 
         console.log('event.target: ', event.target, 'key', event.key, ' text content: ', event.target.textContent)
         
@@ -111,7 +103,7 @@ function handleTextboxInput(event, options, ctx){
         if(!sent||true){
             
             //Clear informly infos
-            removeAllInformlyInfos()
+            hideAllInformlyInfos()
 
             // set a timeout to send the comment to chat gpt after a preset delay
             // _INFORMLY_CHATGPT_TIMEOUT = setTimeout(()=>triggerCheck(event.target), options._input_timeout)
@@ -150,7 +142,7 @@ let logic = {
      * 
      * Expected return value: true/false
      */
-    isInformlyTarget: alwaysTrue,
+    isInformlyTarget: checkTargetRecursively,
     /**
      * This function is given a pre-processed input object, and must determine 
      * if the kind of text/preprocessing artifacts extracted, warrent misinformation checking.
@@ -247,6 +239,31 @@ function simpleHighlightText(input, event){
     console.log("UPDATED HTML")
 
 
+
+}
+
+/**
+ * Looks through parentElements until it finds one whose role is set to textbox.
+ * 
+ * A function like this is critical so the addon doesn't invoke on the content of the 
+ * whole page if the user hits the spacebar or something.
+ * 
+ * @param {*} event emitted 'keydown' event
+ * @param {*} ctx informly context
+ */
+function checkTargetRecursively(event,ctx){
+
+    if (event.target.hasAttribute('is-informly-target')){
+        return event.target.getAttribute('is-informly-target') === 'true'
+    }
+
+    if(hasTextboxRole(event.target)){
+        event.target.setAttribute('is-informly-target', true)
+        return true
+    }else{
+        event.target.setAttribute('is-informly-target', false)
+        return false
+    }
 
 }
 
@@ -502,9 +519,6 @@ function getHighlight(id){
 // Returns the informly info container if it is in the DOM.
 function getInformlyInfoElement(misinfoId){
     return $('[informly-type="informly-info"][misinfo-id="'+misinfoId+'"]')[0]
-    const xpath = "//div[informly-type='informly-info' and misinfo-id='"+misinfoId+"']"
-    const element = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
-    return element
 }
 
 function hideInformlyInfo(misinfoId, ctx){
@@ -648,6 +662,30 @@ function removeAllInformlyInfosExcept(misinfoId){
     $('[informly-type="informly-info"]').remove(e=>e.getAttribute('misinfo-id') !== misinfoId)
 }
 
+function hideAllInformlyInfosExcept(misinfoId){
+    console.log('hiding all informly infos except for ', misinfoId)
+    $('[informly-type="informly-info"][misinfo-id!="'+misinfoId+'"]')
+    .css({'display':'none'})
+}
+
 function removeAllInformlyInfos(){
     $('[informly-type="informly-info"]').remove()
+}
+
+function hideAllInformlyInfos(){
+     $('[informly-type="informly-info"]').css({"display":"none"})
+}
+
+
+/**
+ * 
+ * @param {*} element 
+ * @returns true if the element or one of it's ancestors has the textbox role.
+ */
+function hasTextboxRole (element){
+    if (element && element.hasAttribute('role') && element.getAttribute('role') === 'textbox'){
+        return true
+    }else{
+        return hasTextboxRole(element.parent)
+    }
 }
