@@ -16,7 +16,7 @@
     "content_scripts":[
         {
             "matches": ["*://www.reddit.com/*"],
-            "js": ["raf-ff-fix.js","fontawesome.js", "jquery-3.6.4.min.js", "options/optionDef.js", "models.js","main.js"],
+            "js": ["libs/raf-ff-fix.js","libs/fontawesome.js", "libs/jquery-3.6.4.min.js", "options/optionDef.js", "models.js","main.js"],
             "css": ["informly-styles.css"]
         }
     ],
