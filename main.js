@@ -1,5 +1,6 @@
 const _INFORMLY_INFO_TEMPLATE_URL = browser.runtime.getURL('templates/informly_check_info.html')
 const _INFORMLY_MISINFO_PROMPT_TEMPLATE_URL = browser.runtime.getURL('templates/misinfo_prompt.json')
+const _INFORMLY_ICON_URL = browser.runtime.getURL('informly_icon.png')
 
 //DEFINE TIMEOUTS
 var _INFORMLY_CHATGPT_TIMEOUT
@@ -750,6 +751,7 @@ function completionWrapperV1(content){
         .then(template_html=>Promise.resolve(template_html.replace("{#TOKEN#}", content)))
         .then(template_html=>Promise.resolve(template_html.replaceAll("{#MISINFO_ID#}", misinfoId)))
         .then(template_html=>Promise.resolve(template_html.replace("{#BYTES#}", bytes)))
+        .then(template_html=>Promise.resolve(template_html.replace("{#IMG_URL#}",_INFORMLY_ICON_URL)))
         .then(template=>{
             var temp = document.createElement('template')
             temp.innerHTML = template

@@ -22,7 +22,8 @@
     ],
     "web_accessible_resources": [
         "templates/informly_check_info.html",
-        "templates/misinfo_prompt.json"
+        "templates/misinfo_prompt.json",
+        "informly_icon.png"
     ],
     "browser_specific_settings": {
         "gecko": {
