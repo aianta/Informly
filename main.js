@@ -249,8 +249,8 @@ let logic = {
      */
     isRelevant: relevanceCheckV1,
     chatGPTResponseClassifier: classifierV1,
-    preProcessInput: dummyDbpediaSpotlightPreProcess,
-    chatGPTCheck: dummyChatGPTCheck,
+    preProcessInput: dbpediaSpotlightPreProcess,
+    chatGPTCheck: basicChatGPTCheck,
     highlightText: dummyHighlightText,
     firstPassValidation: firstPassValidationV1
 }
@@ -428,14 +428,22 @@ function classifierV1(record){
     // const sentences = [...gptOutput.matchAll(sentenceRegex)]
     const sentences = splitSentences(gptOutput)
 
-    const isMisinfoTokens = ['There is', 'There are', 'misinformation', 'inaccura', 'not true', 'is false']
+    const isMisinfoTokens = ['There is', 'not entirely accur','claims that are not entirely accur', 'There are', 'misinformation', 'inaccura', 'not true', 'is false']
     const notMisinfoTokens = ['There is no', 'no misinformation', 'no inaccura', 'There are no']
+
+    const isMisinfoFullTextTokens = ['no evidence', 'it is not accur', 'not supported by evidence', 'is also false', 'debunked', 'It is misinformation']
 
     let includesIsTokens = false
     let includesNotTokens = false
 
     for (token of isMisinfoTokens){
         if (sentences[0].includes(token)){
+            includesIsTokens = true
+        }
+    }
+
+    for (token of isMisinfoFullTextTokens){
+        if(gptOutput.includes(token)){
             includesIsTokens = true
         }
     }
@@ -520,7 +528,7 @@ function basicChatGPTCheck(record, options){
  */
 function updateGhostboxBefore(record, event, ctx){
 
-    let hauntee = event.type === 'paste'?event._informly_tbox:event.target
+    let hauntee = event.target
     console.log('hauntee', hauntee)
     let box_position = hauntee.getBoundingClientRect()
 
@@ -850,6 +858,12 @@ function extractSurfaceForms(spotlightResponse){
 }
 
 function splitSentences(input){
-    result = input.split('.') 
-    return input.includes('.')?result:[]
+    const regex = new RegExp('[.?!]', 'gmi')
+    result = input.split(regex)
+    const hasPunctuation = input.match(regex)
+    if(hasPunctuation){
+        return result
+    }else{
+        return []
+    }
 }
