@@ -1,4 +1,3 @@
-console.log("Options.js says hi!")
 
 // Define an option map of storage keys with their corresponding html input ids.
 const optionMap = new Map()
