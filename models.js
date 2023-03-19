@@ -105,6 +105,12 @@ class Highlight{
         this.zones.forEach(zone=>zone.markSubmitted())
     }
 
+    resetAllZonesExcept(zoneId){
+        this.zones
+            .filter(zone=>zone.id !== zoneId)
+        .forEach(zone=>zone.resetZone())
+    }
+
     resetAllZones(){
         this.zones.forEach(zone=>zone.resetZone())
     }
@@ -242,10 +248,11 @@ class GhostBox{
     }
 
     //Resets all zones except those corresponding to a highlight with misinfoId
-    resetAllZonesExcept(misinfoId){
-        this.highlights
-            .filter(h=>h.misinfoId !== misinfoId)
-            .forEach(h=>h.resetAllZones())
+    resetAllZonesExcept( zoneId){
+        let zones = []
+        this.highlights.forEach(h=>zones.push(...h.zones))
+        zones.filter(zone=>zone.id !== zoneId)
+            .forEach(z=>z.resetZone())
     }
 
     resetZoneById(zoneId){
@@ -287,20 +294,19 @@ class GhostBox{
             console.error("Highlighted text: ", highlightedText, " not part of snippet! ", snippet)
         }
         //Make HTML for span for this highlight
-        let spanHTML = "<span misinfo-id='"+snippet.misinfoId+
-        "' contenteditable=\"true\" onmouseover='document.dispatchEvent(new CustomEvent(\"informly-show\", "+snippet.misinfoId+
-        "))' >"+highlightedText+"</span>"
+        let spanHTML = `<span misinfo-id='${snippet.misinfoId}' onmouseover='document.dispatchEvent(new CustomEvent("informly-show", {detail:{misinfoId:'${snippet.misinfoId}'}}))'>${highlightedText}</span>`
         return spanHTML
     }
 
     /**
-     * WARNING: only call before update content.
+     * WARNING: only call before updateContent() probably...
      * 
      * Discards the snippet at the front of the snippet list. Used when a snippet
      * is not deemed relevant.
      */
     discardSnippet(){
         this.snippets.shift()
+        this.updateContent()
     }
 
     updateContent(){
@@ -344,7 +350,9 @@ class GhostBox{
 
 
     handleUserUpdate(newContent, record){
+        console.log('before handleUserUpdate', this)
         this.fullText = newContent
+
 
         if (this.snippets.length === 0){
             this.snippets.unshift(
@@ -390,7 +398,7 @@ class GhostBox{
             this.snippets.unshift(nextSnippet)
         }
 
-
+        console.log('after handleUserUpdate', this)
         return this.snippets[0]  
     }
 }

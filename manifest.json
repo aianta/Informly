@@ -15,14 +15,14 @@
     },
     "content_scripts":[
         {
-            "matches": ["*://*.reddit.com/*"],
+            "matches": ["*://www.reddit.com/*"],
             "js": ["raf-ff-fix.js","fontawesome.js", "jquery-3.6.4.min.js", "models.js","main.js"],
             "css": ["informly-styles.css"]
         }
     ],
     "web_accessible_resources": [
-        "templates/informly_button.html",
-        "templates/informly_check_info.html"
+        "templates/informly_check_info.html",
+        "templates/misinfo_prompt.json"
     ],
     "browser_specific_settings": {
         "gecko": {

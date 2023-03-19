@@ -1,0 +1,13 @@
+{
+    "model": "gpt-3.5-turbo-0301",
+    "messages": [
+        {"role": "system", "content": "You are fact checking comments on a reddit post with the title '{#REDDIT_TITLE#}' that was posted on the '{#SUBREDDIT#}' subreddit. "},
+        {"role": "user", "content": "Does the following text contain misinformation?  '{#SAMPLE#}'"}
+    ],
+    "temperature": 0,
+    "n": 1,
+    "max_tokens": 200,
+    "top_p": 1,
+    "frequency_penalty": 0,
+    "presence_penalty": 0
+}

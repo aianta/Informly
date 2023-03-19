@@ -1,4 +1,5 @@
 const _INFORMLY_INFO_TEMPLATE_URL = browser.runtime.getURL('templates/informly_check_info.html')
+const _INFORMLY_MISINFO_PROMPT_TEMPLATE_URL = browser.runtime.getURL('templates/misinfo_prompt.json')
 
 //DEFINE TIMEOUTS
 var _INFORMLY_CHATGPT_TIMEOUT
@@ -8,12 +9,15 @@ var _INFORMLY_HIDE_INFO_TIMEOUT
 // TODO: unduplicate this.
 const optionMap = new Map()
 optionMap.set('_openai_key', '')
+optionMap.set('_openai_org', '')
 optionMap.set('_openai_url','https://api.openai.com/v1/chat/completions')
 optionMap.set('_dbpedia_spotlight_url', 'https://api.dbpedia-spotlight.org/en')
 optionMap.set('_prompt_prefix', 'Does the following comment contain misinformation: ')
 optionMap.set('_input_timeout', 5000)
 optionMap.set('_fade_timeout', 2000)
 optionMap.set('_thank_timeout', 2000)
+optionMap.set('_min_snippet_length', 1)
+optionMap.set('_min_sentences', 1) 
 optionMap.set('_allow_negative_samples', true) //TODO: change to false
 optionMap.set('_allow_positive_samples', true) //TODO: change to false
 optionMap.set('_geographic_region', 'na')
@@ -61,6 +65,9 @@ loadoptions().then(options=>{
     // Register listener for page scrolling, informly needs to move the ghostbox around for things to work properly
     document.addEventListener('scroll', (event)=>handleScroll(event, options, ctx))
 
+    // Register listener for 'paste', triggered when a user initiates the paste action. We fire off the textbox handler, just in case it was the target of the paste.
+    // TODO
+    //document.addEventListener('paste', (event)=>{})
     console.log('Informly loaded!')
 
 })
@@ -71,11 +78,11 @@ function handleScroll(event, options, ctx){
     if (ctx.ghostbox){ //If a ghostbox has been defined
         ctx.ghostbox.place()
 
-        console.log('haunter.x', ctx.ghostbox.textbox.getBoundingClientRect().x,
-            'haunter.y', ctx.ghostbox.textbox.getBoundingClientRect().y,
-            'hauntee.x', box_position.x,
-            'hauntee.y', box_position.y
-        )
+        // console.log('haunter.x', ctx.ghostbox.textbox.getBoundingClientRect().x,
+        //     'haunter.y', ctx.ghostbox.textbox.getBoundingClientRect().y,
+        //     'hauntee.x', box_position.x,
+        //     'hauntee.y', box_position.y
+        // )
     }
 
     //Move all the informly boxes too!
@@ -175,14 +182,14 @@ function handleInformlyShow(event, options, ctx){
     const zoneId = event.explicitOriginalTarget.getAttribute('zone-id')
     
 
-    ctx.ghostbox.resetAllZonesExcept(misinfoId)
+    ctx.ghostbox.resetAllZonesExcept(zoneId)
     //Clear all informly infos (make sure we don't clutter the screen)
     hideAllInformlyInfosExcept(misinfoId)
     showInformlyInfo(misinfoId, zoneId) //event.detail.misinfoId has the misinfoId
 }
 
 function handleTextboxInput(event, options, ctx){
-
+    console.log('event: ', event)
     // Only do something if text is being entered into a textbox that is an informly target.
     if (logic.isInformlyTarget(event, ctx)){
 
@@ -203,19 +210,13 @@ function handleTextboxInput(event, options, ctx){
         _INFORMLY_CHATGPT_TIMEOUT = setTimeout(
             ()=>createMisinfoRecord(event.target.textContent, event, options)
                 .then(result=>updateGhostboxBefore(result, event, ctx))
+                .then(result=>logic.firstPassValidation(result, options, ctx))
                 .then(result=>logic.preProcessInput(result, options))
                 .then(result=>logic.isRelevant(result))
-                .then(result=>{
-                    if (result.isRelevant){
-                        return logic.chatGPTCheck(result, options)
-                    }else{
-                        ctx.ghostbox.discardSnippet()
-                        return Promise.reject("Text was not relevant")
-                    }
-                    })
+                .then(result=>result.isRelevant?logic.chatGPTCheck(result, options, ctx): Promise.reject("Text was not relevant"))
                 .then(result=>result.chatGPTResponse?logic.chatGPTResponseClassifier(result):Promise.reject('No chatgpt response'))
                 .then(result=>persist(result, options))
-                .then(result=>result.isMisinfo?injectInformlyInfo(result, event):Promise.reject('Misinfo classification missing'))
+                .then(result=>result.isMisinfo?injectInformlyInfo(result, event):Promise.reject('No misinfo'))
                 .then(result=>logic.highlightText(result, event))
                 .then(result=>updateGhostboxAfter(result, event, ctx))
                 .catch(reason=>console.log(reason))
@@ -247,10 +248,11 @@ let logic = {
      * Expected return value: A resolved promise containing the input object ammended with an input.isRelevant flag.
      */
     isRelevant: relevanceCheckV1,
-    chatGPTResponseClassifier: simpleClassifier,
-    preProcessInput: dbpediaSpotlightPreProcess,
+    chatGPTResponseClassifier: classifierV1,
+    preProcessInput: dummyDbpediaSpotlightPreProcess,
     chatGPTCheck: dummyChatGPTCheck,
-    highlightText: dummyHighlightText
+    highlightText: dummyHighlightText,
+    firstPassValidation: firstPassValidationV1
 }
 
 // LOGIC IMPLEMENTATIONS
@@ -266,7 +268,40 @@ function passthrough(input){
     return input
 }
 
+function dummyFirstPassValidation(record, options, ctx){
+    return Promise.resolve(record)
+}
 
+function firstPassValidationV1(record, options, ctx){
+    /**
+     * Let's say that a complete snippet must:
+     *  * Have at least some number of sentence(s). 
+     *  * Be at least some number of characters long.
+     *  * TODO: Not be more than 900 words. (DBPedia spotlight limit)
+     */
+    if(record.snippet.text.length < options._min_snippet_length){
+        console.log('Snippet is too short! Got ', record.snippet.text.length, ' need at least ', options._min_snippet_length )
+        //Discard snippet: This way this text is considered again in the future when it might be complete.
+        ctx.ghostbox.discardSnippet()
+        return Promise.reject('Snippet is too short!')
+    }
+
+    // const sentenceRegex = new RegExp('((\\w+)[\\s.])+', 'gim')
+    const sentences = splitSentences(record.snippet.text)
+    // const sentences = [...record.snippet.text.matchAll(sentenceRegex)] 
+    const numSentences = sentences.length
+    if( numSentences < options._min_sentences){
+        console.log("Snippet contains too few sentences. Got ", numSentences, " need at least ", options._min_sentences)
+        //Discard the snippet: This way this text is considered again in the future when it might be complete.
+        ctx.ghostbox.discardSnippet()
+        return Promise.reject('Snippet contains too few sentences.')
+    }
+
+    //TODO: this probably shouldn't be done here, but since I have the data and it's kinda nifty
+    record.snippet.sentences = sentences
+
+    return Promise.resolve(record)
+}
 
 /**
  * Do something to the record before processing
@@ -277,7 +312,21 @@ function dummyPreProcess(record){
     return Promise.resolve(record)
 }
 
+// Be nice to dbpedia spotlight when debugging
+function dummyDbpediaSpotlightPreProcess(record, options){
+    record.snippet.surfaceForms = ['nasa']
+    return Promise.resolve(record)
+}
+
+//TODO: rename
 function dbpediaSpotlightPreProcess(record, options){
+
+        //Extract reddit post title
+        record.redditTitle = $('h1')[0].textContent
+        
+        //Extract subreddit
+        const subredditRegex = new RegExp('(?<=r\\/)([a-zA-z0-9_]*)', 'gm')
+        record.subreddit = window.location.href.match(subredditRegex)[0]
 
         const commentText = encodeURIComponent(record.snippet.text)
 
@@ -289,7 +338,7 @@ function dbpediaSpotlightPreProcess(record, options){
         .then(spotlightResponse=>{
             console.log('spotlightResponse', spotlightResponse)
             //Extract surface forms
-            record.surfaceForms = extractSurfaceForms(spotlightResponse)
+            record.snippet.surfaceForms = extractSurfaceForms(spotlightResponse)
         })
         .then(()=>Promise.resolve(record))
 
@@ -300,27 +349,10 @@ function relevanceCheckV1(record){
     /**
      * Let's say a relevant snippet must:
      *  * Have at least 1 surface form (be about a person, place or thing).
-     *  * Contain at least 1 sentence.
-     *  * Be at least 100 characters long. 
      */
-    
-    if(record.snippet.text.length < 1){ //TODO change to 100
-        record.isRelevant = false
-        console.log('Snippet not long enough.')
-        return Promise.resolve(record)
-    }
-
-    if(record.surfaceForms.length <= 0){
+    if(record.snippet.surfaceForms.length <= 0){
         record.isRelevant = false
         console.log('Snippet does not contain any surface forms!')
-        return Promise.resolve(record)
-    }
-
-    //https://stackoverflow.com/questions/26081820/regular-expression-to-extract-whole-sentences-with-matching-word
-    const sentenceRegex = new RegExp('[^.]* [^.]*\\.', 'gmi')
-    if ([...record.snippet.text.matchAll(sentenceRegex)].length <= 0){
-        record.isRelevant = false
-        console.log('Snippet does not contain a sentence.')
         return Promise.resolve(record)
     }
 
@@ -377,18 +409,50 @@ function dummyHighlightText(input, event){
  */
 function checkTargetRecursively(event,ctx){
 
-    if (event.target.hasAttribute('is-informly-target')){
-        return event.target.getAttribute('is-informly-target') === 'true'
+    return hasTextboxRole(event.target)
+    
+}
+
+/**
+ * Let's say that gpt thinks it's misinfo if:
+ *  * 'There is' and 'misinformation' appear in the first sentence.
+ *  * 'There is no' does not appear in the first setence.
+ *  * 'does not contain' does not appear in the first sentence.
+ * @param {*} record 
+ * @returns 
+ */
+function classifierV1(record){
+    const sentenceRegex = new RegExp('((\\w+)[\\s.])+', 'gim')
+    const gptOutput = record.chatGPTResponse
+
+    // const sentences = [...gptOutput.matchAll(sentenceRegex)]
+    const sentences = splitSentences(gptOutput)
+
+    const isMisinfoTokens = ['There is', 'There are', 'misinformation', 'inaccura', 'not true', 'is false']
+    const notMisinfoTokens = ['There is no', 'no misinformation', 'no inaccura', 'There are no']
+
+    let includesIsTokens = false
+    let includesNotTokens = false
+
+    for (token of isMisinfoTokens){
+        if (sentences[0].includes(token)){
+            includesIsTokens = true
+        }
     }
 
-    if(hasTextboxRole(event.target)){
-        event.target.setAttribute('is-informly-target', true)
-        return true
+    for (token of notMisinfoTokens){
+        if (sentences[0].includes(token)){
+            includesNotTokens = true
+        }
+    }
+
+    if(includesIsTokens && !includesNotTokens){
+        record.isMisinfo = true
     }else{
-        event.target.setAttribute('is-informly-target', false)
-        return false
+        record.isMisinfo = false
     }
 
+    return Promise.resolve(record)
 }
 
 /**
@@ -400,6 +464,7 @@ function checkTargetRecursively(event,ctx){
  * @returns 
  */
 function simpleClassifier(input){
+
     if(input.chatGPTResponse.includes('contains misinformation')){
         input.isMisinfo = true
     }else{
@@ -416,7 +481,7 @@ function simpleClassifier(input){
  * @returns 
  */
 function dummyChatGPTCheck(record){
-    record.chatGPTResponse = "contains misinformation"
+    record.chatGPTResponse = "There are a few inaccuracies in this statement. Firstly, Trump is not being prosecuted for repaying his attorney for a settlement. He is being investigated for potential campaign finance violations related to payments made to women who claimed to have had affairs with him. Secondly, there is no evidence that Biden has committed any actual crimes. The allegations against him and his son Hunter regarding their dealings in Ukraine have not been substantiated. Finally, while it is true that the justice system should not be used for political purposes, it is also important to investigate and hold accountable those who may have broken the law, regardless of their political affiliations. Ultimately, it is up to the justice system to determine whether or not a crime has been committed, not just the voters."
     return Promise.resolve(record)
 }
 
@@ -428,12 +493,17 @@ function dummyChatGPTCheck(record){
  * @param {*} record 
  */
 function basicChatGPTCheck(record, options){
-    sent = true //TODO remove this eventually
-    return postData(options._openai_url, completionWrapperV1(record.textToCheck),
-     {
+
+    const headers = {
         "OpenAI-Organization":"org-qRCRUPAKr7f9yoyNSQMZz1VG", //TODO: add to options
         "Authorization": "Bearer " + options._openai_key
-    })
+    }
+
+    if (options._openai_org){ // This header is optional, only insert if provided.
+        headers['OpenAI-Organization'] = options._openai_org
+    }
+
+    return postData(options._openai_url, completionWrapperV2_1(record.redditTitle, record.subreddit, record.textToCheck),headers)
            .then(response=>Promise.resolve(extractChatGPTResponse(response)))
            .then(response=>{
                 record.chatGPTResponse = response
@@ -450,16 +520,19 @@ function basicChatGPTCheck(record, options){
  */
 function updateGhostboxBefore(record, event, ctx){
 
-    let box_position = event.target.getBoundingClientRect()
+    let hauntee = event.type === 'paste'?event._informly_tbox:event.target
+    console.log('hauntee', hauntee)
+    let box_position = hauntee.getBoundingClientRect()
+
     //If the ghostbox doesn't exist, set it up now
     if (ctx.ghostbox === undefined){
         //Figure out padding so our ghostbox can match it.
-        let pt = window.getComputedStyle(event.target, null).getPropertyValue('padding-top')
-        let pb = window.getComputedStyle(event.target, null).getPropertyValue('padding-bottom')
-        let pl = window.getComputedStyle(event.target, null).getPropertyValue('padding-left')
-        let pr = window.getComputedStyle(event.target, null).getPropertyValue('padding-right')
+        let pt = window.getComputedStyle(hauntee, null).getPropertyValue('padding-top')
+        let pb = window.getComputedStyle(hauntee, null).getPropertyValue('padding-bottom')
+        let pl = window.getComputedStyle(hauntee, null).getPropertyValue('padding-left')
+        let pr = window.getComputedStyle(hauntee, null).getPropertyValue('padding-right')
         //Figure out the font being used so our ghostbox can match it.
-        let font = window.getComputedStyle(event.target, null).getPropertyValue('font')
+        let font = window.getComputedStyle(hauntee, null).getPropertyValue('font')
         ctx.ghostbox = new GhostBox( 
             box_position.x,
             box_position.y,
@@ -470,10 +543,14 @@ function updateGhostboxBefore(record, event, ctx){
             pb,
             pl,
             pr,
-            event.target //the event target gets haunted :) <we use this to update ghostboxes on scroll>
+            hauntee //the hauntee gets haunted :) <we use this to update ghostboxes on scroll>
             )
     }else{
         //Sometimes the position or size changes, adjust to that.
+        if (box_position.x !== ctx.ghostbox.hauntee.getBoundingClientRect().x){
+            //Update the hauntee if the positions don't match
+            ctx.ghostbox.hauntee = hauntee
+        }
         ctx.ghostbox.setPosition(box_position.x, box_position.y, box_position.width, box_position.height)
     }
     ctx.ghostbox.place()
@@ -484,6 +561,7 @@ function updateGhostboxBefore(record, event, ctx){
 
     //Define the number of bytes the snippet is worth
     record.bytes = new Blob([record.snippet.text]).size
+    console.log('ghostbox before', ctx.ghostbox)
 
     return Promise.resolve(record)
 }
@@ -631,6 +709,35 @@ function extractChatGPTResponse(response){
     return response.choices[0].message.content
 }
 
+//v2.1 completions wrapper
+function completionWrapperV2_1(redditTitle, subreddit, sampleText){
+    const result = {
+        "model": "gpt-3.5-turbo-0301",
+        "messages": [
+            {"role": "system", "content": `You are fact checking comments on a reddit post with the title '${redditTitle}' that was posted on the '${subreddit}' subreddit. `},
+            {"role": "user", "content": `Does the following text contain misinformation?  '${sampleText}'`}
+        ],
+        "temperature": 0,
+        "n": 1,
+        "max_tokens": 200,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0
+    }
+    return result
+}
+
+//v2 completions wrapper
+function completionWrapperV2(redditTitle, subreddit, sampleText){
+    return fetch(_INFORMLY_MISINFO_PROMPT_TEMPLATE_URL)
+    .then(template_data=>template_data.text())
+    .then(raw_template=>Promise.resolve(raw_template.replace("{#REDDIT_TITLE#}", redditTitle)))
+    .then(raw_template=>Promise.resolve(raw_template.replace('{#SUBREDDIT#}', subreddit)))
+    .then(raw_template=>Promise.resolve(raw_template.replace('{#SAMPLE#}', sampleText)))
+    .then(raw_template=>Promise.resolve(JSON.parse(raw_template)))
+}
+
+
 //v1 completions wrapper
 function completionWrapperV1(content){
     let prompt = options._prompt_prefix + content
@@ -712,9 +819,9 @@ function hideAllInformlyInfos(){
  */
 function hasTextboxRole (element){
     if (element && element.hasAttribute('role') && element.getAttribute('role') === 'textbox'){
-        return true
-    }else if(element.parent){
-        return hasTextboxRole(element.parent)
+        return element
+    }else if(element.parentElement){
+        return hasTextboxRole(element.parentElement)
     }else{
         return false
     }
@@ -740,4 +847,9 @@ function extractSurfaceForms(spotlightResponse){
         result.push(element.getAttribute('name'))
     }
     return result
+}
+
+function splitSentences(input){
+    result = input.split('.') 
+    return input.includes('.')?result:[]
 }
