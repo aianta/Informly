@@ -22,13 +22,13 @@
             <input type="text" id="openai-key" name="openai-key" />
         </div>
         <div class="option-entry">
-            <label for="openai-url">OpenAI API Base URL:</label>
-            <input type="text" id="openai-url" name="openai-url" />
+            <label for="openai-org">OpenAI Org</label>
+            <input type="text" id="openai-org" name="openai-org">
+            <p>Optional, if not specified, header will be omitted in chatGPT requests</p>
         </div>
         <div class="option-entry">
-            <label for="prompt-prefix">Prompt Prefix:</label>
-            <input type="text" id="prompt-prefix" name="prompt-prefix" />
-            <p>This prefix is added to parts/all of your comment content to prompt chatGPT to determine if it contains misinformation. This should probably not be an option in any real implementation of informly.</p>
+            <label for="openai-url">OpenAI API Base URL:</label>
+            <input type="text" id="openai-url" name="openai-url" />
         </div>
         <div class="option-entry">
             <label for="input-timeout">Delay before scan:</label>
@@ -39,6 +39,16 @@
             <label for="fade-timeout">Delay before Informly Box fade:</label>
             <input type="number" id="fade-timeout" name="fade-timeout" />
             <p>This is how long (in milliseconds) Informly will wait after you move your mouse off the Informly box before hiding the box.</p>
+        </div>
+        <div class="option-entry">
+            <label for="min-snippet-length">Minimum characters in a snippet:</label>
+            <input type="number" id="min-snippet-length" name="min-snippet-length" />
+            <p>This is how many characters of new text must be entered for Informly to verify it.</p>
+        </div>
+        <div class="option-entry">
+            <label for="min-sentences">Minimum sentences in a snippet:</label>
+            <input type="number" id="min-sentences" name="min-sentences" />
+            <p>This is how many sentences must be in a new snippet for Informly to verify it.</p>
         </div>
         <div class="option-entry">
             <label for="allow-negative-samples">Send negative samples:</label>
@@ -73,6 +83,7 @@
 
       <button type="submit">Save</button>
     </form>
+    <script src="optionDef.js"></script>
     <script src="options.js"></script>
   </body>
 </html>

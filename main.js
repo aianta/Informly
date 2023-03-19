@@ -5,33 +5,16 @@ const _INFORMLY_MISINFO_PROMPT_TEMPLATE_URL = browser.runtime.getURL('templates/
 var _INFORMLY_CHATGPT_TIMEOUT
 var _INFORMLY_HIDE_INFO_TIMEOUT
 
-// Define an option map of default values to use in case of undefined.
-// TODO: unduplicate this.
-const optionMap = new Map()
-optionMap.set('_openai_key', '')
-optionMap.set('_openai_org', '')
-optionMap.set('_openai_url','https://api.openai.com/v1/chat/completions')
-optionMap.set('_dbpedia_spotlight_url', 'https://api.dbpedia-spotlight.org/en')
-optionMap.set('_prompt_prefix', 'Does the following comment contain misinformation: ')
-optionMap.set('_input_timeout', 5000)
-optionMap.set('_fade_timeout', 2000)
-optionMap.set('_thank_timeout', 2000)
-optionMap.set('_min_snippet_length', 1)
-optionMap.set('_min_sentences', 1) 
-optionMap.set('_allow_negative_samples', true) //TODO: change to false
-optionMap.set('_allow_positive_samples', true) //TODO: change to false
-optionMap.set('_geographic_region', 'na')
-
 //Fetch the extension options
 function loadoptions(){
     const options = {}
 
     const optionPromises = []
 
-    for(let key of optionMap.keys()){
+    for(let key of _informly_defaultMap.keys()){
         optionPromises.push(browser.storage.sync.get(key)
         // Use saved option key or default
-        .then(result=>key in result?options[key]=result[key]:options[key]=optionMap.get(key)))
+        .then(result=>key in result?options[key]=result[key]:options[key]=_informly_defaultMap.get(key)))
     }
     
     return Promise.all(optionPromises).then(()=>{
@@ -41,6 +24,11 @@ function loadoptions(){
 }
 
 loadoptions().then(options=>{
+
+    if(!options._openai_key || !options._openai_url){
+        alert("Critical options not set, please fill in all Informly extension options not specified as optional.")
+        return //The fun ends here in that case.
+    }
 
     //Create the informly context for the page
     let ctx = {}
@@ -65,9 +53,8 @@ loadoptions().then(options=>{
     // Register listener for page scrolling, informly needs to move the ghostbox around for things to work properly
     document.addEventListener('scroll', (event)=>handleScroll(event, options, ctx))
 
-    // Register listener for 'paste', triggered when a user initiates the paste action. We fire off the textbox handler, just in case it was the target of the paste.
-    // TODO
-    //document.addEventListener('paste', (event)=>{})
+    // Register listener for 'paste' and disable the event. It messes with too many things. TODO: support copy paste.
+    document.addEventListener('paste', (event)=>{event.preventDefault(); console.log('Sorry, paste breaks Informly.')})
     console.log('Informly loaded!')
 
 })
@@ -78,11 +65,6 @@ function handleScroll(event, options, ctx){
     if (ctx.ghostbox){ //If a ghostbox has been defined
         ctx.ghostbox.place()
 
-        // console.log('haunter.x', ctx.ghostbox.textbox.getBoundingClientRect().x,
-        //     'haunter.y', ctx.ghostbox.textbox.getBoundingClientRect().y,
-        //     'hauntee.x', box_position.x,
-        //     'hauntee.y', box_position.y
-        // )
     }
 
     //Move all the informly boxes too!
@@ -249,8 +231,8 @@ let logic = {
      */
     isRelevant: relevanceCheckV1,
     chatGPTResponseClassifier: classifierV1,
-    preProcessInput: dbpediaSpotlightPreProcess,
-    chatGPTCheck: basicChatGPTCheck,
+    preProcessInput: dummyDbpediaSpotlightPreProcess,
+    chatGPTCheck: dummyChatGPTCheck,
     highlightText: dummyHighlightText,
     firstPassValidation: firstPassValidationV1
 }
@@ -503,7 +485,6 @@ function dummyChatGPTCheck(record){
 function basicChatGPTCheck(record, options){
 
     const headers = {
-        "OpenAI-Organization":"org-qRCRUPAKr7f9yoyNSQMZz1VG", //TODO: add to options
         "Authorization": "Bearer " + options._openai_key
     }
 
