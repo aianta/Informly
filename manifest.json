@@ -11,7 +11,7 @@
             "48":"informly_icon.png"
         },
         "default_title": "Informly",
-        "default_popup": "popup.html"
+        "default_popup": "popup/popup.html"
     },
     "content_scripts":[
         {
