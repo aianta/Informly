@@ -54,6 +54,29 @@ loadoptions().then(options=>{
     // Register listener for page scrolling, informly needs to move the ghostbox around for things to work properly
     document.addEventListener('scroll', (event)=>handleScroll(event, options, ctx))
 
+    // Register listener for 'beforeunload', informly needs to clean up if the user navigates away
+    oldHref = document.location.href
+    const observer = new MutationObserver(mutations=>{
+        mutations.forEach(()=>{
+            if(oldHref !== document.location.href){
+                oldHref = document.location.href;
+                
+                //window location changed!
+                console.log('duuuuuude')
+                removeAllInformlyInfos() //Hmm...why doesn't this work by itself...
+                $('[informly-type="informly-info"]').remove()
+                ctx.ghostbox.destroy()
+                ctx.ghostbox = undefined
+
+            }
+        })
+    })
+    observer.observe(document.querySelector('body'), {childList:true,subtree:true})
+    addEventListener('beforeunload', (event)=>{
+        console.log('unload event!')
+        
+    })
+
     // Register listener for 'paste' and disable the event. It messes with too many things. TODO: support copy paste.
     document.addEventListener('paste', (event)=>{event.preventDefault(); console.log('Sorry, paste breaks Informly.')})
     console.log('Informly loaded!')

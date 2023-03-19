@@ -401,6 +401,11 @@ class GhostBox{
         console.log('after handleUserUpdate', this)
         return this.snippets[0]  
     }
+
+    destroy(){
+        this.highlights.forEach(h=>h.destroy())
+        this.element.remove()
+    }
 }
 
 
