@@ -9,6 +9,7 @@ var _INFORMLY_HIDE_INFO_TIMEOUT
 const optionMap = new Map()
 optionMap.set('_openai_key', '')
 optionMap.set('_openai_url','https://api.openai.com/v1/chat/completions')
+optionMap.set('_dbpedia_spotlight_url', 'https://api.dbpedia-spotlight.org/en')
 optionMap.set('_prompt_prefix', 'Does the following comment contain misinformation: ')
 optionMap.set('_input_timeout', 5000)
 optionMap.set('_fade_timeout', 2000)
@@ -202,9 +203,16 @@ function handleTextboxInput(event, options, ctx){
         _INFORMLY_CHATGPT_TIMEOUT = setTimeout(
             ()=>createMisinfoRecord(event.target.textContent, event, options)
                 .then(result=>updateGhostboxBefore(result, event, ctx))
-                .then(result=>logic.preProcessInput(result))
+                .then(result=>logic.preProcessInput(result, options))
                 .then(result=>logic.isRelevant(result))
-                .then(result=>result.isRelevant?logic.chatGPTCheck(result): Promise.reject('Text is not relevant'))
+                .then(result=>{
+                    if (result.isRelevant){
+                        return logic.chatGPTCheck(result, options)
+                    }else{
+                        ctx.ghostbox.discardSnippet()
+                        return Promise.reject("Text was not relevant")
+                    }
+                    })
                 .then(result=>result.chatGPTResponse?logic.chatGPTResponseClassifier(result):Promise.reject('No chatgpt response'))
                 .then(result=>persist(result, options))
                 .then(result=>result.isMisinfo?injectInformlyInfo(result, event):Promise.reject('Misinfo classification missing'))
@@ -238,9 +246,9 @@ let logic = {
      * 
      * Expected return value: A resolved promise containing the input object ammended with an input.isRelevant flag.
      */
-    isRelevant: dummyRelevanceCheck,
+    isRelevant: relevanceCheckV1,
     chatGPTResponseClassifier: simpleClassifier,
-    preProcessInput: dummyPreProcess,
+    preProcessInput: dbpediaSpotlightPreProcess,
     chatGPTCheck: dummyChatGPTCheck,
     highlightText: dummyHighlightText
 }
@@ -258,13 +266,68 @@ function passthrough(input){
     return input
 }
 
+
+
 /**
- * Do something to the input before processing
- * @param {*} input 
+ * Do something to the record before processing
+ * @param {*} record 
  * @returns 
  */
-function dummyPreProcess(input){
-    return Promise.resolve(input)
+function dummyPreProcess(record){
+    return Promise.resolve(record)
+}
+
+function dbpediaSpotlightPreProcess(record, options){
+
+        const commentText = encodeURIComponent(record.snippet.text)
+
+        return fetch(options._dbpedia_spotlight_url + "/spot?text=" + commentText + '&confidence=0.5', {
+            method: "GET"
+        })
+        .then(result=>result.text())
+        .then(result=>new window.DOMParser().parseFromString(result, "text/xml"))
+        .then(spotlightResponse=>{
+            console.log('spotlightResponse', spotlightResponse)
+            //Extract surface forms
+            record.surfaceForms = extractSurfaceForms(spotlightResponse)
+        })
+        .then(()=>Promise.resolve(record))
+
+}
+
+function relevanceCheckV1(record){
+
+    /**
+     * Let's say a relevant snippet must:
+     *  * Have at least 1 surface form (be about a person, place or thing).
+     *  * Contain at least 1 sentence.
+     *  * Be at least 100 characters long. 
+     */
+    
+    if(record.snippet.text.length < 1){ //TODO change to 100
+        record.isRelevant = false
+        console.log('Snippet not long enough.')
+        return Promise.resolve(record)
+    }
+
+    if(record.surfaceForms.length <= 0){
+        record.isRelevant = false
+        console.log('Snippet does not contain any surface forms!')
+        return Promise.resolve(record)
+    }
+
+    //https://stackoverflow.com/questions/26081820/regular-expression-to-extract-whole-sentences-with-matching-word
+    const sentenceRegex = new RegExp('[^.]* [^.]*\\.', 'gmi')
+    if ([...record.snippet.text.matchAll(sentenceRegex)].length <= 0){
+        record.isRelevant = false
+        console.log('Snippet does not contain a sentence.')
+        return Promise.resolve(record)
+    }
+
+    record.isRelevant = true
+    record.textToCheck = record.snippet.text
+    console.log('text is relevant!', record.snippet.text)
+    return Promise.resolve(record)
 }
 
 /**
@@ -364,9 +427,13 @@ function dummyChatGPTCheck(record){
  * Need to return record.chatGPTResponse
  * @param {*} record 
  */
-function basicChatGPTCheck(record){
+function basicChatGPTCheck(record, options){
     sent = true //TODO remove this eventually
-    return postData(options._openai_url, completionWrapperV1(record.textToCheck))
+    return postData(options._openai_url, completionWrapperV1(record.textToCheck),
+     {
+        "OpenAI-Organization":"org-qRCRUPAKr7f9yoyNSQMZz1VG", //TODO: add to options
+        "Authorization": "Bearer " + options._openai_key
+    })
            .then(response=>Promise.resolve(extractChatGPTResponse(response)))
            .then(response=>{
                 record.chatGPTResponse = response
@@ -531,18 +598,20 @@ function showInformlyInfo(misinfoId, zoneId){
 
 // Source: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 // Example POST method implementation:
-function postData(url = "", data = {}) {
+function postData(url = "", data = {}, extraHeaders={}) {
     console.log("Sending request: ", data)
+    const baseHeaders = {
+        "Content-Type": "application/json"
+    }
+
+    const finalHeaders = {...baseHeaders, ...extraHeaders}
+
     try{
         // Default options are marked with *
         const response = fetch(url, {
         method: "POST", // *GET, POST, PUT, DELETE, etc.,
-        headers: {
-        "Content-Type": "application/json",
-        "OpenAI-Organization": "org-qRCRUPAKr7f9yoyNSQMZz1VG", //TODO: add to options
-        "Authorization": "Bearer " + options._openai_key
-        },
-            body: JSON.stringify(data), // body data type must match "Content-Type" header
+        headers: finalHeaders,
+        body: JSON.stringify(data), // body data type must match "Content-Type" header
         });
         
         return response.then(result=>Promise.resolve(result.json())); // parses JSON response into native JavaScript objects
@@ -663,4 +732,12 @@ function creditBytes(record){
         return Promise.resolve(result.user)
     }).then(user=>browser.storage.local.set({user}))
     .then(()=>Promise.resolve(record))
+}
+
+function extractSurfaceForms(spotlightResponse){
+    const result = []
+    for (const element of spotlightResponse.getElementsByTagName('surfaceForm')){
+        result.push(element.getAttribute('name'))
+    }
+    return result
 }

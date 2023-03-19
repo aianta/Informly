@@ -293,6 +293,16 @@ class GhostBox{
         return spanHTML
     }
 
+    /**
+     * WARNING: only call before update content.
+     * 
+     * Discards the snippet at the front of the snippet list. Used when a snippet
+     * is not deemed relevant.
+     */
+    discardSnippet(){
+        this.snippets.shift()
+    }
+
     updateContent(){
         
         let resultHTML = ''
