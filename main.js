@@ -253,9 +253,9 @@ function handleTextboxInput(event, options, ctx){
 let logic = {
     isInformlyTarget: checkTargetRecursively,
     firstPassValidation: firstPassValidationV1,
-    preProcessInput: dummyDbpediaSpotlightPreProcess,
+    preProcessInput: dbpediaSpotlightPreProcess,
     isRelevant: relevanceCheckV1,
-    chatGPTCheck: dummyChatGPTCheck,
+    chatGPTCheck: chatGPTCheck,
     chatGPTResponseClassifier: classifierV1,
     highlightText: surfaceFormHighlight,
 }
