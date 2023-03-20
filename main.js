@@ -86,10 +86,6 @@ $(window).on("load",()=>loadoptions().then(options=>{
     document.addEventListener('paste', (event)=>{
         event.preventDefault() //Gotta intercept these. 
         
-        // if(!event.target.textContent){ //If there's nothing in the box.
-        //     //initTextBox()
-        // }
-
         //Force plain text paste
         let text = event.clipboardData.getData('text/plain')
         text = text.replace(/(\r\n|\n|\r)/gm, ""); //no more new lines
@@ -253,18 +249,15 @@ function handleTextboxInput(event, options, ctx){
 
 /**
  * ASSEMBLE EXTENSION LOGIC HERE
- * Following the Comment Verification Flow (see README), 
- * each blue diamond and green rectangle corresponds with a function you can customize here.
- */
+*/
 let logic = {
-
     isInformlyTarget: checkTargetRecursively,
     firstPassValidation: firstPassValidationV1,
-    preProcessInput: dummyDbpediaSpotlightPreProcess,
+    preProcessInput: dbpediaSpotlightPreProcess,
     isRelevant: relevanceCheckV1,
-    chatGPTCheck: dummyChatGPTCheck,
+    chatGPTCheck: chatGPTCheck,
     chatGPTResponseClassifier: classifierV1,
-    highlightText: dummyHighlightText,
+    highlightText: surfaceFormHighlight,
 }
 
 // LOGIC IMPLEMENTATIONS
@@ -419,6 +412,23 @@ function dummyHighlightText(input, event){
     return Promise.resolve(input)
 }
 
+function surfaceFormHighlight(record, event){
+    //See if there are any common surface forms between the user's comment and chat GPT's response.
+    const userSurfaceForms = record.snippet.surfaceForms
+    const gptSurfaceForms = record.gptSurfaceForms
+
+    ///https://stackoverflow.com/questions/1885557/simplest-code-for-array-intersection-in-javascript
+    const intersection = userSurfaceForms.filter(form=>gptSurfaceForms.includes(form))
+
+    if (intersection.length > 0){
+        record.snippet.highlight = intersection[0]
+    }else{
+        //Do the simple highlight
+        record.snippet.highlight = record.snippet.text.trim()
+    }
+    return Promise.resolve(record)
+}
+
 /**
  * Looks through parentElements until it finds one whose role is set to textbox.
  * 
@@ -438,12 +448,8 @@ function checkTargetRecursively(event,ctx){
         }
     }
 
-    // //Ignore events for the following keys
-    // let ignore = [91,92,112,113,114,115,116,117,118,119,120,121,122,123,144,145,182,183,44,45,36,35,34,33,20,19,18,17,16,13]
-    // if (ignore.includes(event.keyCode)){
-    //     return false
-    // }
-    // console.log('got keyCode:', event.keyCode)
+    //This is the unique class for reddit's markdown text box. Hopefully they don't redeploy before this is checked.
+    //If they do, a more limited version of the functionality should stil work. 
     if(event.target.getAttribute('class') === '_6Ej82J4aTDK36LLOcpFbC '){
         return true
     }
@@ -549,7 +555,7 @@ function dummyChatGPTCheck(record){
  * Need to return record.chatGPTResponse
  * @param {*} record 
  */
-function basicChatGPTCheck(record, options){
+function chatGPTCheck(record, options){
 
     const headers = {
         "Authorization": "Bearer " + options._openai_key
@@ -563,7 +569,18 @@ function basicChatGPTCheck(record, options){
            .then(response=>Promise.resolve(extractChatGPTResponse(response)))
            .then(response=>{
                 record.chatGPTResponse = response
-                return Promise.resolve(record)
+
+                //Lets do surface form analysis on chatGPT's response
+                const encodedResponse = encodeURIComponent(response)
+                return fetch(options._dbpedia_spotlight_url+"/spot?text="+encodedResponse+'&confidence=0.5', {
+                    method: "GET"
+                })
+                .then(result=>result.text())
+                .then(result=>new window.DOMParser().parseFromString(result, "text/xml"))
+                .then(spotlightResponse=>{
+                    record.gptSurfaceForms = extractSurfaceForms(spotlightResponse)
+                    return Promise.resolve(record)
+                })
             })
 }
 
@@ -844,7 +861,7 @@ function hideAllInformlyInfos(){
 
 
 /**
- * 
+ * Help detect a fancy react textbox
  * @param {*} element 
  * @returns true if the element or one of it's ancestors has the textbox role.
  */
@@ -858,6 +875,7 @@ function hasTextboxRole (element){
     }
 }
 
+//Gamification!
 function creditBytes(record){
     //Credit the user the appropriate number of bytes
     return browser.storage.local.get('user').then(result=>{
