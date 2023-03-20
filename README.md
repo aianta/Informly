@@ -1,4 +1,4 @@
-![Informly Icon](informly_icon.png) 
+![Informly Icon](informly_icon.png) [ Quick Install v0.1](https://github.com/aianta/Informly/raw/main/xpi/informly-0.1.xpi)
 
 >The symbol ⊤ is a value that is always true. The symbol ⊥ is a value that is always false.
 
@@ -81,6 +81,15 @@ From the same popup, users are able to download their personal dataset. This is 
 * (Probably Optional) An OpenAI Organization.
 
 ## Instructions
+
+### Quick Install
+[ Quick Install v0.1](https://github.com/aianta/Informly/raw/main/xpi/informly-0.1.xpi)
+
+**If Informly doesn't kick in right away, once you're on a thread with a comment box available, refresh the page and try entering some content again.**
+
+>NOTE: Informly works best in reddit's Markdown comment editor. If using the default/'fancy' editor we recommend only typing on the first line/not hitting enter to introduce paragraph breaks. 
+
+### Manual Instal
 
 1. Clone this repository to your machine.
 2. Open firefox and navigate to `about:debugging` through your url bar.
