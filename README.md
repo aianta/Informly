@@ -7,6 +7,7 @@ A [2023 Canadian #AI Misinformation Hackathon](https://socialmedialab.ca/events/
 # Quick Links
 * [Installation](#installation)
 * [Implementation](#implementation-details)
+* [Evaluation & More](#evaluation-opportunities-and-more)
 
 # Informly - High level Overview
 A Grammarly for misinformation. Using the misinformation interventions specified  [here](https://interventionstoolbox.mpib-berlin.mpg.de/table_concept.html), Informly targets:
