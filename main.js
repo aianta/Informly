@@ -24,18 +24,21 @@ function loadoptions(){
     })
 }
 
-$('document').ready(()=>loadoptions().then(options=>{
+_INFORMLY_REDDIT_TEXTBOX_INIT = false
+
+$(window).on("load",()=>loadoptions().then(options=>{
 
     if(!options._openai_key || !options._openai_url){
         alert("Critical options not set, please fill in all Informly extension options not specified as optional.")
         return //The fun ends here in that case.
     }
-
+    
+        
     /**
      * Reddit's textbox doesn't really take up space until you type in in. We need it to 'inflate' before we can haunt it with our ghostbox.
      */
-    $('[class="notranslate public-DraftEditor-content"][role="textbox"][spellcheck="true"][contenteditable="true"][style="outline: none; user-select: text; white-space: pre-wrap; overflow-wrap: break-word;"]')[0].innerText = 'i'
-    $('[class="notranslate public-DraftEditor-content"][role="textbox"][spellcheck="true"][contenteditable="true"][style="outline: none; user-select: text; white-space: pre-wrap; overflow-wrap: break-word;"]')[0].innerText = ''
+    // initTextBox()
+
 
     //Create the informly context for the page
     let ctx = {}
@@ -80,7 +83,18 @@ $('document').ready(()=>loadoptions().then(options=>{
     observer.observe(document.querySelector('body'), {childList:true,subtree:true})
 
     // Register listener for 'paste' and disable the event. It messes with too many things. TODO: support copy paste.
-    // document.addEventListener('paste', (event)=>{event.preventDefault(); console.log('Sorry, paste breaks Informly.')})
+    document.addEventListener('paste', (event)=>{
+        event.preventDefault() //Gotta intercept these. 
+        
+        // if(!event.target.textContent){ //If there's nothing in the box.
+        //     //initTextBox()
+        // }
+
+        //Force plain text paste
+        let text = event.clipboardData.getData('text/plain')
+        text = text.replace(/(\r\n|\n|\r)/gm, ""); //no more new lines
+        document.execCommand('insertText', false, text)
+    })
     console.log('Informly loaded!')
 
 })
@@ -430,6 +444,9 @@ function checkTargetRecursively(event,ctx){
     //     return false
     // }
     // console.log('got keyCode:', event.keyCode)
+    if(event.target.getAttribute('class') === '_6Ej82J4aTDK36LLOcpFbC '){
+        return true
+    }
 
     return hasTextboxRole(event.target)
     
@@ -872,4 +889,14 @@ function splitSentences(input){
     }else{
         return []
     }
+}
+
+function initTextBox(){
+    
+        /**
+         * Reddit's textbox doesn't really take up space until you type in in. We need it to 'inflate' before we can haunt it with our ghostbox.
+         */
+        $('[class="notranslate public-DraftEditor-content"][role="textbox"][spellcheck="true"][contenteditable="true"][style="outline: none; user-select: text; white-space: pre-wrap; overflow-wrap: break-word;"]')[0].innerText = 'i'
+        $('[class="notranslate public-DraftEditor-content"][role="textbox"][spellcheck="true"][contenteditable="true"][style="outline: none; user-select: text; white-space: pre-wrap; overflow-wrap: break-word;"]')[0].innerText = ''
+
 }

@@ -59,8 +59,8 @@ class Zone{
 
     show(){
         this.element.style.display = 'block'
-        this.element.style.backgroundColor = 'yellow'
-        this.element.style.opacity = 0.5
+        this.element.style.backgroundColor = '#fcf6c5'
+        this.element.style.opacity = 0.35
         this.element.style.width = this.width + "px"
         this.element.style.height = this.height + "px"
         this.element.style['z-index'] = 1000
