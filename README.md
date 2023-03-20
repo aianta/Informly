@@ -24,7 +24,7 @@ Comment content is scanned by chatGPT for misinformation, if misinformation is d
 
 ![ChatGPT explains the misinformation it detected](/img/informly-box-surface-form-highlighting-hover-no-submit.png)
 
-This gives an opportunity for **self-reflection** and **debunking** to take place. Informly further applies **friction** by prompting the user to provide a source for their claim, or indicate that they believe their claim was marked as misinformation inappropriately. 
+This gives an opportunity for **self-reflection** and **debunking** to take place. Informly further applies **friction** by prompting the user to provide a source for their claim, or indicate that they believe their claim was marked as misinformation inappropriately. However, the user is in no way obligated to engage, nor in any way prevented from posting their comment regardless.
 
 The user can dismiss the informly box at any time by clicking the close icon in the top right corner. Doing so will leave the underlying text highlighted, allowing the user to return to the box later if they so desire. 
 
@@ -70,6 +70,41 @@ From the same popup users are able to download their personal dataset. This is a
 ```
 
 # Installation 
+
+## Requirements
+
+* Firefox - Developed and tested on Firefox Developer edition v112.0b3 -> [Get it here](https://www.mozilla.org/en-US/firefox/112.0beta/releasenotes/).
+* An OpenAI API Key with access to the `gpt-3.5-turbo-0301` model.
+* (Probably Optional) An OpenAI Organization.
+
+## Instructions
+
+1. Clone this repository to your machine.
+2. Open firefox and navigate to `about:debugging` through your url bar.
+3. Choose `This Firefox` from the sidebar on the left hand side, you should be taken to a screen that looks like this:
+![about debugging screen in firefox developer edition](/img/about-debugging-this-firefox.png)
+4. Click `Load Temporary Addon...` and navigate to the cloned repository on your machine. 
+5. Choose any file in the repository and click open. Informly should then load in. 
+![Informly loaded in once a file from the cloned repo is chosen](/img/infromly-loaded.png)
+6. With Informly loaded, right-click the Informly icon that should appear on your toolbar and choose `Manage Extension`.
+
+![Manage the informly extension](/img/manage-extension.png)
+
+It is possible that, depending on your browser settings the icon may not appear. In this case, you may find informly under the extensions button on your toolbar. Click the gear icon beside Informly and select `Manage Extension`.
+
+![Extensions menu in firefox where informly may be found if it is not automatically on your toolbar](/img/alt-manage-extension.png)
+
+This will bring you to the Addon details screen. 
+
+![Informly details screen](/img/manage-details.png)
+
+7. Click `Options` from the tabs on the details screen, and fill in the `OpenAI API Key` and `OpenAI Org` fields, and click `Save`.
+
+![Informly options screen](/img/options.png)
+
+This should complete Informly installation, head over to http://www.reddit.com and find an interesting thread. 
+
+>NOTE: Informly works best in reddit's Markdown comment editor. If using the default/'fancy' editor we reccomend only typing on the first line/not hitting enter to introduce paragraph breaks. 
 
 # Functionality
 
