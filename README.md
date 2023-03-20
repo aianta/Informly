@@ -6,6 +6,7 @@ A [2023 Canadian #AI Misinformation Hackathon](https://socialmedialab.ca/events/
 
 # Quick Links
 * [Installation](#installation)
+* [Implementation](#implementation-details)
 
 # Informly - High level Overview
 A grammarly for misinformation. From the misinformation interventions  [here](https://interventionstoolbox.mpib-berlin.mpg.de/table_concept.html), Informly targets:
@@ -106,6 +107,8 @@ This will bring you to the Addon details screen.
 
 This should complete Informly installation, head over to http://www.reddit.com and find an interesting thread. 
 
+**If Informly doesn't kick in right away, once you're on a thread with a comment box available, refresh the page and try entering some content again.**
+
 >NOTE: Informly works best in reddit's Markdown comment editor. If using the default/'fancy' editor we reccomend only typing on the first line/not hitting enter to introduce paragraph breaks. 
 
 # Implementation details
@@ -170,17 +173,112 @@ let logic = {
 As we felt some sections of the pipeline were especially 'swapable', we implemented a logic object that allows one to easily change the behavior at those sections. Care must still be take to ensure inputs to each section are satisfied. However this design choice came in very handy. During development/debugging the UI, we'd often swap expensive API call implementations for dummy implementations. 
 
 ## The Ghostbox Approach 
+One major challenge for the extension approach was the fact that moden social media applications like reddit use reactive front end frameworks like [React](https://react.dev/) to implement their UIs. Simple HTML input fields or textareas aren't as common, and modifying the contents of these textboxes runs the risk of breaking application behavior. 
+
+Our inital thought, to simply wrap text we'd like to highlight in `<span></span>` elements with appropriate styling and `onmousehover` events was therefore a no-go. 
+
+### Ghostboxes
+To refrain from editing the content of a textbox while still delivering our functionality we opted to create a hidden 'ghost' textbox with the exact same style and position as the one the user was typing in. This 'ghostbox' would stay underneath the page via `z-index` and 'haunt' the textbox on the layers above. 
+
+We recreate the content of the commentbox in the ghostbox and create '<span></span>'s for sections we want to highlight. Though ghostbox spans don't bother with coloring, since they're 'underneath' the rest of the page, they're never seen by the user. Their focus is on maintaining their position with the corresponding elements in the commentbox above.
+
+Once the `<span></span>`'s are created we create `Highlight` objects for each span. Each `Highlight` object, in turn, has one or more `Zones`.
+
+```javascript
+class GhostBox{
+    /**
+     * 
+     * @param {*} x x position to mimc
+     * @param {*} y y position to mimic
+     * @param {*} width width to mimic
+     * @param {*} height height to mimic
+     * @param {*} font font to mimic
+     * @param {*} pt padding top to mimic
+     * @param {*} pb padding bottom to mimic
+     * @param {*} pl padding left to mimic
+     * @param {*} pr padding right to mimic
+     * @param {*} hauntee the element from the page that this ghostbox haunts
+     */
+    constructor( x, y, width, height, font, pt, pb, pl, pr, hauntee){
+        this.id = uuidv4() //Ghostbox id
+        this.hauntee = hauntee
+        this.... set a bunch of instance variables
+
+        //Create the ghostbox
+        let template = document.createElement('template')
+        template.innerHTML = '<div id="'+this.id+'"></div>' //TODO - better ;)
+        document.documentElement.appendChild(template.content)
+
+        // Define highlights 
+        this.highlights = []
+
+        // Define snippets
+        this.snippets = []
+
+        // Define spans
+        this.spans = []
+
+        // Plain string containing full text in the box
+        this.fullText = ''
+    }
+```
+
+`Highlight`'s are organizational objects that have a 1-to-1 relationship with a section of text to be highlighted (a ghostbox `<span></span>`). However they are insufficient by themselves. `Zone`'s are required because spans can, well, span multiple lines, in which case multiple rectangles are required to highlight the whole text. 
+
+![3 zone highlight](/img/3-zone-highlight.png)
+
+In the above example, 3 zones (rectangles) have to be drawn to cover the 'single' highlight. Zones are the actual visual element that you see ontop of the text. They are just `divs` with a high `z-index`, a `0.5` opacity, and the highlight color. 
+
+The ghostbox and the zones are positioned absolutely onto the screen, with the former pinned against the boundingClientRectangle of the comment box, and the latter pinned against the corresponding span's `clientRects`.
+
+As the user scrolls, we update the zones and ghostbox's position to keep eveything where it's supposed to be.
 
 ### The Snippet System
 
+The snippet system is our attempt at partitioning text as the user types for live feedback. It allows us to consider only parts of a comment we haven't yet processed. As a snippet is typed, we check that it is long enough, and relevant for misinformation checking. If so we process it and create spans/highlights/zones as necessary. 
+
+Below is a GIF of the snippet system in action, no actualy relevance checking or misinfo checking is happening here. Informly is also set to process input after 1 second from the last update. The best user experience is achieved when the delay before scan is a good bit longer than that (try 2-5 seconds in the options), however it's easier to see the snippet system in action with a lower delay.
+
+![Snippet system gif](/img/informly.gif)
+
+### Final Comments on UI work
+
+Though it's painful, there is a lot of complexity involved in delivering a truely seamless user experience for Informly while being careful to, in effect, never touch the overlying (Reddit) application, nor inadvertedly bother the user. The ghostboxs and the snippet system were, in retrospect, quite amibitious systems to try and implement. Sadly, there are many cases where they will choke, sometimes because Reddit's react events have modified elements in unexpected ways, other times just on account of plain old bugs. Nevertheless it was rewarding to piece them together and we hope they're stable enough to work at least a few times on your machine as well.
+
 ## Relevance, DBpedia Spotlight and Surface Forms
+As mentioned previously, we'd like to avoid bothering the user unnecessarily, and as you can see from the previous section, when one highlights a lot, one virtually highlights nothing. 
+
+To better achieve these goals we make use of the free and publically available [DBPedia Spotlight](https://www.dbpedia-spotlight.org/api) api. It provides us with a wikipedia backed entity recognition service. We make the assumption that, for there to be misinformation in a snippet, we should get at least one entity match. The portion of the text that matched a DBpedia entity, is called a 'surface form'. 
+
+In terms of relevance this is a pretty simplistic test. A more advanced approach might attempt to leverage something like Stanford CoreNLP and try to piece together a dependecy graph of the snippet. Making sure that there is at least some relation between a verb and a subject/object surface form. 
+
+Nevertheless, by performing surface form analysis on chatGPT and focusing out highlights on terms that appear as surface forms for both the user's snippet *and* chatGPT's response we were able to highlight a lot less, in a way that still made sense.  
 
 ## ChatGPT Prompt Engineering
+We took a much more relaxed approach towards this portion of the solution. Especially once we were driven mildly insane by ghostboxes and snippets. 
 
-## Classification of ChatGPT responses
+While we acknowledge that preventing prompt injection, and adding all the disclaimers around the effectiveness/relevance/bias/appropriateness of chatGPT responses is critical to any real world application of the technology. We felt anyone evaluating our work or attempting to build off it, was likely familiar enough with the technology to know what to expect. 
 
 
-# How it could help
+For reference the format of our chatGPT requests is shown below. 
+
+```javascript
+{
+        "model": "gpt-3.5-turbo-0301",
+        "messages": [
+            {"role": "system", "content": `You are fact checking comments on a reddit post with the title '${redditTitle}' that was posted on the '${subreddit}' subreddit. `},
+            {"role": "user", "content": `Does the following text contain misinformation?  '${sampleText}'`}
+        ],
+        "temperature": 0,
+        "n": 1,
+        "max_tokens": 200,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0
+}
+```
+
+
 
 # Evaluation, Opportunities, and more...
 Admittedly very limited time was left for evaluation. Throughout development, the main user flow was invoked in many different ways to attempt to provide a good demo experience.

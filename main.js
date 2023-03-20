@@ -253,9 +253,9 @@ function handleTextboxInput(event, options, ctx){
 let logic = {
     isInformlyTarget: checkTargetRecursively,
     firstPassValidation: firstPassValidationV1,
-    preProcessInput: dbpediaSpotlightPreProcess,
+    preProcessInput: dummyDbpediaSpotlightPreProcess,
     isRelevant: relevanceCheckV1,
-    chatGPTCheck: chatGPTCheck,
+    chatGPTCheck: dummyChatGPTCheck,
     chatGPTResponseClassifier: classifierV1,
     highlightText: surfaceFormHighlight,
 }
@@ -545,6 +545,7 @@ function simpleClassifier(input){
  */
 function dummyChatGPTCheck(record){
     record.chatGPTResponse = "There are a few inaccuracies in this statement. Firstly, Trump is not being prosecuted for repaying his attorney for a settlement. He is being investigated for potential campaign finance violations related to payments made to women who claimed to have had affairs with him. Secondly, there is no evidence that Biden has committed any actual crimes. The allegations against him and his son Hunter regarding their dealings in Ukraine have not been substantiated. Finally, while it is true that the justice system should not be used for political purposes, it is also important to investigate and hold accountable those who may have broken the law, regardless of their political affiliations. Ultimately, it is up to the justice system to determine whether or not a crime has been committed, not just the voters."
+    record.gptSurfaceForms = []
     return Promise.resolve(record)
 }
 
