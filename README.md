@@ -1,4 +1,8 @@
-![Informly Icon](informly_icon.png) [ Quick Install v0.1](https://github.com/aianta/Informly/raw/main/xpi/informly-0.1.xpi)
+![Informly Icon](informly_icon.png) [ Quick Install v0.1 XPI](https://github.com/aianta/Informly/raw/main/xpi/informly-0.1.xpi) 
+
+In Firefox click Extensions -> Manage Extensions -> Gear Icon -> Install Add-on From File.. then choose the XPI file above. 
+
+For manual installation see [Installation](#installation)
 
 >The symbol ⊤ is a value that is always true. The symbol ⊥ is a value that is always false.
 
