@@ -243,7 +243,9 @@ Below is a GIF of the snippet system in action, no actualy relevance checking or
 
 ### Final Comments on UI work
 
-Though it's painful, there is a lot of complexity involved in delivering a truely seamless user experience for Informly while being careful to, in effect, never touch the overlying (Reddit) application, nor inadvertedly bother the user. The ghostboxs and the snippet system were, in retrospect, quite amibitious systems to try and implement. Sadly, there are many cases where they will choke, sometimes because Reddit's react events have modified elements in unexpected ways, other times just on account of plain old bugs. Nevertheless it was rewarding to piece them together and we hope they're stable enough to work at least a few times on your machine as well.
+Though it's painful, there is a lot of complexity involved in delivering a truly seamless user experience for Informly while never touching the overlying (Reddit) application, nor inadvertedly bothering the user. 
+
+The ghostboxes and the snippet system were, in retrospect, quite amibitious systems to try and implement. Sadly, there are many cases where they will choke, sometimes because Reddit's react events have modified elements in unexpected ways, other times just on account of plain old bugs. Nevertheless it was rewarding to piece them together and we hope they're stable enough to work at least a few times on your machine as well.
 
 ## Relevance, DBpedia Spotlight and Surface Forms
 As mentioned previously, we'd like to avoid bothering the user unnecessarily, and as you can see from the previous section, when one highlights a lot, one virtually highlights nothing. 
