@@ -7,6 +7,8 @@ In Firefox click Extensions -> Manage Extensions -> Gear Icon -> Install Add-on 
 
 >NOTE: You still have to set your **OpenAI API Key** in the addon options. See [Setting up OpenAI API Keys](#setup-open-ai-api-key--org) for more.
 
+See [Usage & Troubleshooting](#usage--troubleshooting) for additional information.
+
 For manual installation see [Installation](#installation)
 
 A [2023 Canadian #AI Misinformation Hackathon](https://socialmedialab.ca/events/hackathon/) entry.
@@ -14,6 +16,7 @@ A [2023 Canadian #AI Misinformation Hackathon](https://socialmedialab.ca/events/
 # Quick Links
 * [Installation](#installation)
 * * [Setting up OpenAI API Keys](#setup-open-ai-api-key--org)
+* [Usage & Troubleshooting](#usage--troubleshooting)
 * [Implementation](#implementation-details)
 * [Evaluation & More](#evaluation-opportunities-and-more)
 
