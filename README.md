@@ -9,7 +9,7 @@ In Firefox click Extensions -> Manage Extensions -> Gear Icon -> Install Add-on 
 
 See [Usage & Troubleshooting](#usage--troubleshooting) for additional information.
 
-For manual installation see [Installation](#installation)
+For manual installation see [Installation](#installation).
 
 A [2023 Canadian #AI Misinformation Hackathon](https://socialmedialab.ca/events/hackathon/) entry.
 
