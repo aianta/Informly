@@ -206,7 +206,7 @@ function handleTextboxInput(event, options, ctx){
             clearTimeout(_INFORMLY_CHATGPT_TIMEOUT)
         }
     
-
+        //alert('got here')
             
         //Clear informly infos
         hideAllInformlyInfos()
@@ -237,28 +237,14 @@ function handleTextboxInput(event, options, ctx){
  * each blue diamond and green rectangle corresponds with a function you can customize here.
  */
 let logic = {
-    /**
-     * This is passed the event emitted by key up. The task of this function 
-     * is to determine if the event was emitted from a textbox that informly 
-     * should be invoked for. 
-     * 
-     * Expected return value: true/false
-     */
+
     isInformlyTarget: checkTargetRecursively,
-    /**
-     * This function is given a pre-processed input object, and must determine 
-     * if the kind of text/preprocessing artifacts extracted, warrent misinformation checking.
-     * 
-     * For example, comments that are expressions of personal opinion shouldn't be checked for misinformation.
-     * 
-     * Expected return value: A resolved promise containing the input object ammended with an input.isRelevant flag.
-     */
-    isRelevant: relevanceCheckV1,
-    chatGPTResponseClassifier: classifierV1,
+    firstPassValidation: firstPassValidationV1,
     preProcessInput: dummyDbpediaSpotlightPreProcess,
+    isRelevant: relevanceCheckV1,
     chatGPTCheck: dummyChatGPTCheck,
+    chatGPTResponseClassifier: classifierV1,
     highlightText: dummyHighlightText,
-    firstPassValidation: firstPassValidationV1
 }
 
 // LOGIC IMPLEMENTATIONS
@@ -305,6 +291,15 @@ function firstPassValidationV1(record, options, ctx){
 
     //TODO: this probably shouldn't be done here, but since I have the data and it's kinda nifty
     record.snippet.sentences = sentences
+
+    //Check to see if we've caught someone mid sentence. 
+    //If the snippet ends on punctuation. The last sentence item in the sentences array will be an empty string.
+    //If it's not an empty string it's the start of an incomplete sentence. 
+    //Let's try and only capture the last complete sentence in the new snippet.
+    if(sentences[sentences.length-1]){
+        record.snippet.text = record.snippet.text.substring(0, record.snippet.text.length - sentences[sentences.length-1].length)
+    }
+
 
     return Promise.resolve(record)
 }
@@ -415,6 +410,21 @@ function dummyHighlightText(input, event){
  */
 function checkTargetRecursively(event,ctx){
 
+    if(!ctx.last){
+        ctx.last = event.target.textContent
+    }else{
+        if (event.target.textContent === ctx.last){
+            return false
+        }
+    }
+
+    //Ignore events for the following keys
+    let ignore = [91,92,112,113,114,115,116,117,118,119,120,121,122,123,144,145,182,183,44,45,36,35,34,33,20,19,18,17,16,13]
+    if (ignore.includes(event.keyCode)){
+        return false
+    }
+    console.log('got keyCode:', event.keyCode)
+
     return hasTextboxRole(event.target)
     
 }
@@ -437,7 +447,8 @@ function classifierV1(record){
     const isMisinfoTokens = ['There is', 'not entirely accur','claims that are not entirely accur', 'There are', 'misinformation', 'inaccura', 'not true', 'is false']
     const notMisinfoTokens = ['There is no', 'no misinformation', 'no inaccura', 'There are no']
 
-    const isMisinfoFullTextTokens = ['no evidence', 'it is not accur', 'not supported by evidence', 'is also false', 'debunked', 'It is misinformation']
+    const isMisinfoFullTextTokens = ['no evidence', 'it is not accur', 'not supported by evidence', 'is also false', 'debunked', 'It is misinformation', 'is incorrect']
+    const notMisinfoFullTextTokens = ['not contain misinformation']
 
     let includesIsTokens = false
     let includesNotTokens = false
@@ -460,11 +471,20 @@ function classifierV1(record){
         }
     }
 
-    if(includesIsTokens && !includesNotTokens){
-        record.isMisinfo = true
-    }else{
+    for (token of notMisinfoFullTextTokens){
+        if(gptOutput.includes(token)){
+            includesNotTokens = true
+        }
+    }
+
+    if (includesNotTokens){
         record.isMisinfo = false
     }
+
+    if(includesIsTokens && !includesNotTokens){
+        record.isMisinfo = true
+    }
+
 
     return Promise.resolve(record)
 }
@@ -740,34 +760,8 @@ function completionWrapperV2_1(redditTitle, subreddit, sampleText){
     return result
 }
 
-//v2 completions wrapper
-function completionWrapperV2(redditTitle, subreddit, sampleText){
-    return fetch(_INFORMLY_MISINFO_PROMPT_TEMPLATE_URL)
-    .then(template_data=>template_data.text())
-    .then(raw_template=>Promise.resolve(raw_template.replace("{#REDDIT_TITLE#}", redditTitle)))
-    .then(raw_template=>Promise.resolve(raw_template.replace('{#SUBREDDIT#}', subreddit)))
-    .then(raw_template=>Promise.resolve(raw_template.replace('{#SAMPLE#}', sampleText)))
-    .then(raw_template=>Promise.resolve(JSON.parse(raw_template)))
-}
 
-
-//v1 completions wrapper
-function completionWrapperV1(content){
-    let prompt = options._prompt_prefix + content
-    let result = {
-        "model": "gpt-3.5-turbo-0301",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0,
-        "n": 1,
-        "max_tokens": 100,
-        "top_p": 1,
-        "frequency_penalty": 0,
-        "presence_penalty": 0
-    }
-    return result
-}
-
- function buildInformlyInfo(content, misinfoId, bytes){
+function buildInformlyInfo(content, misinfoId, bytes){
     // Load the template
     return fetch(_INFORMLY_INFO_TEMPLATE_URL)
         .then(template_data=>template_data.text())

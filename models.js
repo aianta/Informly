@@ -202,6 +202,7 @@ class GhostBox{
         this.textbox.style['padding-bottom'] = pb
         this.textbox.style['padding-left'] = pl
         this.textbox.style['padding-right'] = pr
+        this.textbox.style['white-space'] = 'pre-wrap'
 
         // Define highlights 
         this.highlights = []
@@ -294,7 +295,7 @@ class GhostBox{
             console.error("Highlighted text: ", highlightedText, " not part of snippet! ", snippet)
         }
         //Make HTML for span for this highlight
-        let spanHTML = `<span misinfo-id='${snippet.misinfoId}' onmouseover='document.dispatchEvent(new CustomEvent("informly-show", {detail:{misinfoId:'${snippet.misinfoId}'}}))'>${highlightedText}</span>`
+        let spanHTML = `<span class="informly-ghost-span" misinfo-id='${snippet.misinfoId}' onmouseover='document.dispatchEvent(new CustomEvent("informly-show", {detail:{misinfoId:"${snippet.misinfoId}"}}))'>${highlightedText}</span>`
         return spanHTML
     }
 
@@ -305,7 +306,7 @@ class GhostBox{
      * is not deemed relevant.
      */
     discardSnippet(){
-        this.snippets.shift()
+        this.snippets.pop()
         this.updateContent()
     }
 
@@ -313,7 +314,7 @@ class GhostBox{
         
         let resultHTML = ''
 
-        this.snippets.reverse().forEach(snippet=>{
+        this.snippets.forEach(snippet=>{
             // No highlights in this snippet or snippet was submitted
             if (snippet.highlight === undefined || snippet.submitted === true){
                 //Simply append the snippet text. 
@@ -355,51 +356,43 @@ class GhostBox{
 
 
         if (this.snippets.length === 0){
-            this.snippets.unshift(
+            this.snippets.push(
                 new Snippet(record.id, this.fullText, this.snippets.length)
                 )
         }else{
+            console.log('managing snippets', this.snippets)
             //If we have previous snippets
             let alreadyScanned = ''
-            let temp = []
+            let deleteFrom = 0
+            for (let i = 0; i < this.snippets.length; i++){
+                console.log('alreadyscanned: ',alreadyScanned,'i',i, 'snippet',this.snippets[i].text)
+                alreadyScanned += this.snippets[i].text
 
-            while(this.snippets.length > 0){
-                let snippet = this.snippets.shift()
-                temp.unshift(snippet)
-                alreadyScanned += snippet.text
-
-                //Check stored snippets to determine how many remain valid
                 if(this.fullText.startsWith(alreadyScanned)){
                     continue
                 }else{
-                    //If text has been changed, this makes snippets no longer part of the text invalid
-
-                    //get back the last successful alreadyScanned by removing the snippet that made the if condition fail.
-                    alreadyScanned = alreadyScanned.substring(0, (alreadyScanned.length - snippet.text.length))
-                    //undo the last unshift in temp
-                    temp.shift()
-                    //purge (any) other saved snippets for this textbox as we can't rely on them being valid anymore
-                    //https://stackoverflow.com/questions/1232040/how-do-i-empty-an-array-in-javascript
-                    this.snippets.splice(0,this.snippets.length)
-                    
+                    alreadyScanned = alreadyScanned.substring(0, this.snippets[i-1]?this.snippets[i-1].text.length:0)
+                    console.log('alreadyscanned: ',alreadyScanned)
+                    deleteFrom = i
+                    console.log('delete from', i)
+                    this.snippets.splice(i)
+                    console.log(this.snippets)
                     break
-                    
                 }
             }
 
-            //Reset the snippets array using temp
-            this.snippets = this.snippets.concat(temp)
+            console.log('new snippet text', this.fullText.substring(alreadyScanned.length))
 
             //Determine the new portion of the input and put it in 
             let nextSnippet = new Snippet(record.id, this.fullText.substring(alreadyScanned.length), this.snippets.length)
 
             console.log('New snippet', nextSnippet)
 
-            this.snippets.unshift(nextSnippet)
+            this.snippets.push(nextSnippet)
         }
 
         console.log('after handleUserUpdate', this)
-        return this.snippets[0]  
+        return this.snippets[this.snippets.length-1]  
     }
 
     destroy(){

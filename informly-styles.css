@@ -4,6 +4,11 @@ h1.informly-heading{
     font-size: 14pt !important;
 }
 
+span.informly-ghost-span{
+    white-space: pre-wrap;
+}
+
+
 .informly-info-container{
     position: absolute;
     font-family: Arial, Helvetica, sans-serif;
