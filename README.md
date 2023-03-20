@@ -1,16 +1,19 @@
+>The symbol ⊤ is a value that is always true. The symbol ⊥ is a value that is always false.
+
 ![Informly Icon](informly_icon.png) 
 [ Quick Install v0.1 XPI](https://github.com/aianta/Informly/raw/main/xpi/informly-0.1.xpi) 
 
 In Firefox click Extensions -> Manage Extensions -> Gear Icon -> Install Add-on From File.. then choose the XPI file above. 
 
-For manual installation see [Installation](#installation)
+>NOTE: You still have to set your **OpenAI API Key** in the addon options. See [Setting up OpenAI API Keys](#setup-open-ai-api-key--org) for more.
 
->The symbol ⊤ is a value that is always true. The symbol ⊥ is a value that is always false.
+For manual installation see [Installation](#installation)
 
 A [2023 Canadian #AI Misinformation Hackathon](https://socialmedialab.ca/events/hackathon/) entry.
 
 # Quick Links
 * [Installation](#installation)
+* * [Setting up OpenAI API Keys](#setup-open-ai-api-key--org)
 * [Implementation](#implementation-details)
 * [Evaluation & More](#evaluation-opportunities-and-more)
 
@@ -117,6 +120,8 @@ It is possible that, depending on your browser settings the icon may not appear.
 This will bring you to the Addon details screen. 
 
 ![Informly details screen](/img/manage-details.png)
+
+## Setup Open AI API Key & Org
 
 7. Click `Options` from the tabs on the details screen, and fill in the `OpenAI API Key` and `OpenAI Org` fields, and click `Save`.
 
