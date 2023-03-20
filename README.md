@@ -4,14 +4,16 @@
 
 A [2023 Canadian #AI Misinformation Hackathon](https://socialmedialab.ca/events/hackathon/) entry.
 
+# Quick Links
+* [Installation](#installation)
+
 # Informly - High level Overview
 A grammarly for misinformation. From the misinformation interventions  [here](https://interventionstoolbox.mpib-berlin.mpg.de/table_concept.html), Informly targets:
 * Debunking
 * Friction
-* Self-reflection tools
+* Social Norms
 
 And to a lesser extent:
-* Social Norms
 * Warning and fact-checking labels.
 
 >Note: Informly is an firefox extension aiming to provide a bite-sized 'proof-of-concept' for what is otherwise a much grander vision for a platform for misinformation research, monitoring and prevention. Some features are more illustrative of what could be rather than what is currently implemented.
@@ -24,7 +26,7 @@ Comment content is scanned by chatGPT for misinformation, if misinformation is d
 
 ![ChatGPT explains the misinformation it detected](/img/informly-box-surface-form-highlighting-hover-no-submit.png)
 
-This gives an opportunity for **self-reflection** and **debunking** to take place. Informly further applies **friction** by prompting the user to provide a source for their claim, or indicate that they believe their claim was marked as misinformation inappropriately. However, the user is in no way obligated to engage, nor in any way prevented from posting their comment regardless.
+This gives an opportunity for **social norms** and **debunking** interventions to take place. Informly further applies **friction** by prompting the user to provide a source for their claim, or indicate that they believe their claim was marked as misinformation inappropriately. However, the user is in no way obligated to engage, nor in any way prevented from posting their comment regardless.
 
 The user can dismiss the informly box at any time by clicking the close icon in the top right corner. Doing so will leave the underlying text highlighted, allowing the user to return to the box later if they so desire. 
 
@@ -106,12 +108,91 @@ This should complete Informly installation, head over to http://www.reddit.com a
 
 >NOTE: Informly works best in reddit's Markdown comment editor. If using the default/'fancy' editor we reccomend only typing on the first line/not hitting enter to introduce paragraph breaks. 
 
-# Functionality
+# Implementation details
 
-## Implemented
+The highlevel idea of Informly: 'to higlight misinformation *before* it gets posted' can have some unplesant 'panpoticon-esque' implications. We believe it's important to tread with caution in this direction. Part of the motivation behind Informly was to attempt to demonstrate value to users in the process of slowing down misinformation. That is, the individual should benefit from Informly's useage.
 
-## Future Work
+We see the following incentives for Informly users:
+* Spreading misinformation inadvertedly can happen to anyone. Having a 'judgement-free' (though openAI's tone can certainly leave something to be desired here) AI edit tool help catch misinformation before it is spread can be valuable.
+* The opportunity for passionate users to contribute towards misinformation research in a similar way that [FoldIt](https://fold.it/), [Folding@Home](https://foldingathome.org), or [Bionic](https://seti.berkeley.edu/participate/) users contribute their time, or computational resources to those projects.
+* The opportunity to learn extra things about the subjects you engage with online.
 
-# How it helps fight misinformation
+Additionally we believe Informly has the opportunity to scale well in a crowd-sourced deployment since it makes use of a very familiar 'spellcheck' user experience. A majority of development time for this prototype was spent thinking about how to make the experience as seamless as possible. Our efforts to this end are detailed in this section. 
 
-# Evaluation
+A final note before diving into deeper implementation details: It is unclear if an extension is the best form for an Informly-like solution. The extension model comes with several advantages, notably, ease of distribution and scaling to interested parties. Effort could be invested in supporting and maintaining compatibility with multiple popular social media applications. However, the extension model also comes with challages, some of which will be discussed below. These challenges may be circumvented if an Informly-like system would be implemented by social media application owners as part of their content submission interfaces. 
+
+## The main processing pipeline
+In an attempt to create an extensible/modifiable design for Informly, we chose to use a configurable pipeline approach. That is, the bulk of Informly is implemented as an eventhandler to changes detected in textboxes on the screen.
+
+```javascript
+// Code pruned for clarity.
+function handleTextboxInput(event, options, ctx){
+
+    // Only do something if text is being entered into a textbox that is an informly target.
+    if (logic.isInformlyTarget(event, ctx)){
+
+        _INFORMLY_CHATGPT_TIMEOUT = setTimeout( 
+            ()=>createMisinfoRecord(event.target.textContent, event, options) //Defines the data structure that is passed through the pipeline
+                .then(result=>updateGhostboxBefore(result, event, ctx)) // UI/Ghostbox logic 
+                .then(result=>logic.firstPassValidation(result, options, ctx)) // Cancel the pipeline for trivial input
+                .then(result=>logic.preProcessInput(result, options)) // Create additional artifacts 
+                .then(result=>logic.isRelevant(result)) // Determine if the detected input makes sense to fact check in the first place
+                .then(result=>result.isRelevant?logic.chatGPTCheck(result, options, ctx): Promise.reject("Text was not relevant")) // Fact-check with chatGPT
+                .then(result=>result.chatGPTResponse?logic.chatGPTResponseClassifier(result):Promise.reject('No chatgpt response')) // Try to determine if chatGPT thought the input contained misinformation
+                .then(result=>persist(result, options)) // Build dataset
+                .then(result=>result.isMisinfo?injectInformlyInfo(result, event):Promise.reject('No misinfo')) // Inject informly box into DOM if misinformation was detected
+                .then(result=>logic.highlightText(result, event)) // Identify portion of input text to highlight
+                .then(result=>updateGhostboxAfter(result, event, ctx)) // UI/Ghostbox logic (actual visual highlighting performed)
+                .catch(reason=>console.log(reason)) // Log cancellation reason
+            , options._input_timeout)
+    }
+}
+```
+
+>NOTE: We felt the best user experience was no user experience, that is, we didn't want to bother the user if what they were writing weren't claims. And if they were claims, we didn't want to bother the user if the claims were not misinformation. We continue to reward users for negative (non-misinformation) samples by incrementing bytes in the background, but otherwise we don't display anything. 
+
+With the nature of a hackathon, many stages of the pipeline achieve their goals to varying degrees of success or quality. Sadly, due to the dependant nature of pipeline segments on their predecessors, low quality results can, in some cases, cascade. For example if our relevance check logic emits many false positives, we're bound to bother the user more than necessary and use more compute resource than necessary. Nevertheless this design approach gives one a sort of logical map of the extension to which modular and incremental improvements can be made.  
+
+```javascript
+/**
+ * ASSEMBLE EXTENSION LOGIC HERE
+*/
+let logic = {
+    isInformlyTarget: checkTargetRecursively,
+    firstPassValidation: firstPassValidationV1,
+    preProcessInput: dbpediaSpotlightPreProcess,
+    isRelevant: relevanceCheckV1,
+    chatGPTCheck: chatGPTCheck,
+    chatGPTResponseClassifier: classifierV1,
+    highlightText: surfaceFormHighlight,
+}
+```
+As we felt some sections of the pipeline were especially 'swapable', we implemented a logic object that allows one to easily change the behavior at those sections. Care must still be take to ensure inputs to each section are satisfied. However this design choice came in very handy. During development/debugging the UI, we'd often swap expensive API call implementations for dummy implementations. 
+
+## The Ghostbox Approach 
+
+### The Snippet System
+
+## Relevance, DBpedia Spotlight and Surface Forms
+
+## ChatGPT Prompt Engineering
+
+## Classification of ChatGPT responses
+
+
+# How it could help
+
+# Evaluation, Opportunities, and more...
+Admittedly very limited time was left for evaluation. Throughout development, the main user flow was invoked in many different ways to attempt to provide a good demo experience.
+
+However thought was given to the kind of scientific evalutation an Informly-like system could facilitate. Notably, we feel there is opportunity for misinformation dataset generation. A non-exhaustive list of uses for such a dataset include:
+
+* Evaluating the performance of chatGPT models in identifying misinformation correctly. 
+    * The Informly addon could be distributed to trusted researchers who can act as 'sources of truth' accurately marking false positives.
+* Monitoring the spread of misinformation acrossn geographic regions
+    * While the prototype implements very course grained 'contient' level information as an example this could be expanded upon.
+* Determining common topics/subjects for misinformation by aggregating surface forms. 
+* Creating embeddings for pieces of misinformation and using positive and negative examples. 
+    * These embeddings could then be used for zero-shot classification of ChatGPT responses, replacing the 'dumb' classifier in Informly.
+* Studying the efficacy of Informly at preventing or slowing the spread of misinformation. 
+    * Consenting/interested/qualified participants could be onboarded into double blind randomized control studies where some extension instances don't do anything at all, while others perform their normal functions. The number of times users end up actually submitting misinformation could be agregated. 
