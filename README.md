@@ -218,7 +218,7 @@ Our initial thought, to simply wrap text we'd like to highlight in `<span></span
 ### Ghostboxes
 To refrain from editing the content of a textbox while still delivering our functionality, we opted to create a hidden 'ghost' textbox with the exact same style and position as the one the user was typing in. This 'ghostbox' would stay underneath the page via `z-index` and 'haunt' the textbox on the layers above. 
 
-We recreate the content of the commentbox in the ghostbox and create '<span></span>'s for sections we want to highlight. Though ghostbox spans don't bother with coloring, since they're 'underneath' the rest of the page, they're never seen by the user. Their focus is on maintaining their position with the corresponding elements in the commentbox above.
+We recreate the content of the commentbox in the ghostbox and create `<span></span>`s for sections we want to highlight. Though ghostbox spans don't bother with coloring, since they're 'underneath' the rest of the page, they're never seen by the user. Their focus is on maintaining their position with the corresponding elements in the commentbox above.
 
 Once the `<span></span>`'s are created, we create `Highlight` objects for each span. Each `Highlight` object, in turn, has one or more `Zones`.
 
