@@ -17,7 +17,7 @@ A grammarly for misinformation. From the misinformation interventions  [here](ht
 And to a lesser extent:
 * Warning and fact-checking labels.
 
->Note: Informly is an firefox extension aiming to provide a bite-sized 'proof-of-concept' for what is otherwise a much grander vision for a platform for misinformation research, monitoring and prevention. Some features are more illustrative of what could be rather than what is currently implemented.
+>Note: Informly is an firefox extension aiming to provide a bite-sized 'proof-of-concept' for what is otherwise a much grander vision for a platform for misinformation research, monitoring and prevention. Some features are more illustrative of what could be.
 
 Informly scans user comments as they're being typed for submission on social media sites (for the prototype we focus on [Reddit](https://www.reddit.com)), and highlights potential misinformation in the comment box before it is posted. In this way, misinformation may be stopped *before* it needs to be counteracted down the road. 
 
