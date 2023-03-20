@@ -1,6 +1,6 @@
 ![Informly Icon](informly_icon.png) 
 
->The symbol ⊤ is a value that is always true. The symbol ⊥ is value that is always false.
+>The symbol ⊤ is a value that is always true. The symbol ⊥ is a value that is always false.
 
 A [2023 Canadian #AI Misinformation Hackathon](https://socialmedialab.ca/events/hackathon/) entry.
 
@@ -9,7 +9,7 @@ A [2023 Canadian #AI Misinformation Hackathon](https://socialmedialab.ca/events/
 * [Implementation](#implementation-details)
 
 # Informly - High level Overview
-A grammarly for misinformation. From the misinformation interventions  [here](https://interventionstoolbox.mpib-berlin.mpg.de/table_concept.html), Informly targets:
+A Grammarly for misinformation. Using the misinformation interventions specified  [here](https://interventionstoolbox.mpib-berlin.mpg.de/table_concept.html), Informly targets:
 * Debunking
 * Friction
 * Social Norms
@@ -17,31 +17,31 @@ A grammarly for misinformation. From the misinformation interventions  [here](ht
 And to a lesser extent:
 * Warning and fact-checking labels.
 
->Note: Informly is an firefox extension aiming to provide a bite-sized 'proof-of-concept' for what is otherwise a much grander vision for a platform for misinformation research, monitoring and prevention. Some features are more illustrative of what could be.
+>Note: Informly is a Firefox extension aiming to provide a bite-sized 'proof-of-concept' for what is otherwise a much grander vision for a platform for misinformation research, monitoring, and prevention. Some features are more illustrative of what could be rather than what is currently implemented.
 
-Informly scans user comments as they're being typed for submission on social media sites (for the prototype we focus on [Reddit](https://www.reddit.com)), and highlights potential misinformation in the comment box before it is posted. In this way, misinformation may be stopped *before* it needs to be counteracted down the road. 
+Informly scans user comments as they're being typed for submission on social media sites (for the prototype, we focus on [Reddit](https://www.reddit.com) as our experimental platform), and highlights potential misinformation in the comment box before it is posted. In this way, misinformation may be tackled *before* it needs to be counteracted down the road. 
 
 ![Surface forms being highlighted in comment content as misinfo is detected](/img/surface-form-highlight.png)
 
-Comment content is scanned by chatGPT for misinformation, if misinformation is detected, the corresponding content is lightly highlighted. Upon hovering over the highlighted region, Informly displays the full output from chatGPT, giving the user additional details on the detection. 
+Comment content is scanned by chatGPT for misinformation. If misinformation is detected, the corresponding content is lightly highlighted. Upon hovering over the highlighted region, Informly displays the full output from chatGPT, giving the user additional details on the detected misinformation. 
 
 ![ChatGPT explains the misinformation it detected](/img/informly-box-surface-form-highlighting-hover-no-submit.png)
 
-This gives an opportunity for **social norms** and **debunking** interventions to take place. Informly further applies **friction** by prompting the user to provide a source for their claim, or indicate that they believe their claim was marked as misinformation inappropriately. However, the user is in no way obligated to engage, nor in any way prevented from posting their comment regardless.
+This provides an opportunity for **social norms** and **debunking** interventions to take place. Informly further applies **friction** by prompting the user to provide a source for their claim, or indicate that they believe their claim was marked as misinformation inappropriately. However, the user is in no way obligated to engage, nor prevented from posting their comment regardless.
 
-The user can dismiss the informly box at any time by clicking the close icon in the top right corner. Doing so will leave the underlying text highlighted, allowing the user to return to the box later if they so desire. 
+The user can dismiss the Informly box at any time by clicking the close icon in the top right corner. Doing so will leave the underlying text highlighted, allowing the user to return to the box later if they so desire. 
 
-However if the user enters a source url, or checks the false positive checkbox, the informly box extends to display a submit button. 
+However if the user enters a source url, or checks the false positive checkbox, the Informly box extends to display a submit button. 
 
 ![Informly allows users to submit a url source for their claims or mark them as false positives](/img/informly-show-submit.png)
 
-Upon clicking submit, users are thanked for engaging with the extension, and credited a number of 'btyes'. These bytes are our attempt to highlight the opportunity for gamification. Currently we calculate the number of bytes to credit for a interaction on the basis of the number of bytes in the string sent to chatGPT for checking, let's call this number *X*. Users recieve X bytes when a snippet of their comment is successfully scanned by chatGPT and classified by Informly. These bytes are credited in the background regardless of whether misinformation was detected or not. When a user actively interacts with the informly box and submits either a source or a false positive report they are credited X bytes again for the same snippet. This accounts for the user validating chatGPTs output, and further incentivises engagement. 
+Upon clicking submit, users are thanked for engaging with the extension and credited a number of 'bytes'. These bytes are our attempt to highlight the opportunity for gamification. Currently, we calculate the number of bytes to credit for an interaction on the basis of the number of bytes in the string sent to chatGPT for checking, let's call this number *X*. Users receive X bytes when a snippet of their comment is successfully scanned by chatGPT and classified by Informly. These bytes are credited in the background regardless of whether misinformation was detected or not. When a user actively interacts with the Informly box and submits either a source or a false positive report, they are credited X bytes again for the same snippet. This accounts for the user validating chatGPTs output and further incentivizes engagement. 
 
 At any point in time, users can check a running tally of their bytes by clicking the Informly icon on their toolbar. 
 
 ![Informly displays total number of bytes earned in the extension popup](/img/informly-stats.png)
 
-From the same popup users are able to download their personal dataset. This is a collection of the comment snippets which Informly deemed relevant for misinformation checking. It includes both snippets that were classified as misinformation and those that were not. User provided data as well a several other pieces of information are included as part of this dataset.
+From the same popup, users are able to download their personal dataset. This is a collection of the comment snippets which Informly deemed relevant for misinformation checking. It includes both snippets that were classified as misinformation and those that were not. User provided data as well as several other pieces of information are included as part of this dataset.
 
 ```json
 
@@ -105,24 +105,24 @@ This will bring you to the Addon details screen.
 
 ![Informly options screen](/img/options.png)
 
-This should complete Informly installation, head over to http://www.reddit.com and find an interesting thread. 
+This should complete Informly installation. Head over to http://www.reddit.com and find an interesting thread. 
 
 **If Informly doesn't kick in right away, once you're on a thread with a comment box available, refresh the page and try entering some content again.**
 
->NOTE: Informly works best in reddit's Markdown comment editor. If using the default/'fancy' editor we reccomend only typing on the first line/not hitting enter to introduce paragraph breaks. 
+>NOTE: Informly works best in reddit's Markdown comment editor. If using the default/'fancy' editor we recommend only typing on the first line/not hitting enter to introduce paragraph breaks. 
 
 # Implementation details
 
-The highlevel idea of Informly: 'to higlight misinformation *before* it gets posted' can have some unplesant 'panpoticon-esque' implications. We believe it's important to tread with caution in this direction. Part of the motivation behind Informly was to attempt to demonstrate value to users in the process of slowing down misinformation. That is, the individual should benefit from Informly's useage.
+The highlevel idea of Informly: 'to highlight misinformation *before* it gets posted' can have some unpleasant 'panpoticon-esque' implications. We believe it's important to tread with caution in this direction. Part of the motivation behind Informly was to attempt to demonstrate value to users in the process of slowing down misinformation. That is, the individual should benefit from Informly's usage.
 
 We see the following incentives for Informly users:
-* Spreading misinformation inadvertedly can happen to anyone. Having a 'judgement-free' (though openAI's tone can certainly leave something to be desired here) AI edit tool help catch misinformation before it is spread can be valuable.
+* Spreading misinformation inadvertently can happen to anyone. Having a 'judgement-free' (though openAI's tone can certainly leave something to be desired here) AI edit tool help catch misinformation before it is spread can be valuable.
 * The opportunity for passionate users to contribute towards misinformation research in a similar way that [FoldIt](https://fold.it/), [Folding@Home](https://foldingathome.org), or [Bionic](https://seti.berkeley.edu/participate/) users contribute their time, or computational resources to those projects.
 * The opportunity to learn extra things about the subjects you engage with online.
 
-Additionally we believe Informly has the opportunity to scale well in a crowd-sourced deployment since it makes use of a very familiar 'spellcheck' user experience. A majority of development time for this prototype was spent thinking about how to make the experience as seamless as possible. Our efforts to this end are detailed in this section. 
+Additionally, we believe Informly has the opportunity to scale well in a crowd-sourced deployment since it makes use of a very familiar 'spellcheck' user experience. A major chunk of the development time for this prototype was spent thinking about how to make the experience as seamless as possible. Our efforts to this end are detailed in this section. 
 
-A final note before diving into deeper implementation details: It is unclear if an extension is the best form for an Informly-like solution. The extension model comes with several advantages, notably, ease of distribution and scaling to interested parties. Effort could be invested in supporting and maintaining compatibility with multiple popular social media applications. However, the extension model also comes with challages, some of which will be discussed below. These challenges may be circumvented if an Informly-like system would be implemented by social media application owners as part of their content submission interfaces. 
+A final note before diving into deeper implementation details: It is unclear if an extension is the best form for an Informly-like solution. The extension model comes with several advantages, notably, ease of distribution and scaling to interested parties. Effort could be invested in supporting and maintaining compatibility with multiple popular social media applications. However, the extension model also comes with challenges, some of which will be discussed below. These challenges may be circumvented if an Informly-like system would be implemented by social media application owners as part of their content submission interfaces. 
 
 ## The main processing pipeline
 In an attempt to create an extensible/modifiable design for Informly, we chose to use a configurable pipeline approach. That is, the bulk of Informly is implemented as an eventhandler to changes detected in textboxes on the screen.
@@ -152,9 +152,9 @@ function handleTextboxInput(event, options, ctx){
 }
 ```
 
->NOTE: We felt the best user experience was no user experience, that is, we didn't want to bother the user if what they were writing weren't claims. And if they were claims, we didn't want to bother the user if the claims were not misinformation. We continue to reward users for negative (non-misinformation) samples by incrementing bytes in the background, but otherwise we don't display anything. 
+>NOTE: We felt the best user experience was no user experience, that is, we didn't want to bother the user if what they were writing weren't claims. And if they were claims, we didn't want to bother the user if the claims were not misinformation. We continue to reward users for negative (non-misinformation) samples by incrementing bytes in the background, but otherwisen, we don't display anything. 
 
-With the nature of a hackathon, many stages of the pipeline achieve their goals to varying degrees of success or quality. Sadly, due to the dependant nature of pipeline segments on their predecessors, low quality results can, in some cases, cascade. For example if our relevance check logic emits many false positives, we're bound to bother the user more than necessary and use more compute resource than necessary. Nevertheless this design approach gives one a sort of logical map of the extension to which modular and incremental improvements can be made.  
+With the nature of a hackathon, many stages of the pipeline achieve their goals to varying degrees of success or quality. Sadly, due to the dependent nature of pipeline segments on their predecessors, low-quality results can, in some cases, cascade. For example, if our relevance check logic emits many false positives, we're bound to bother the user more than necessary and use more compute resources than necessary. Nevertheless, this design approach gives one a sort of logical map of the extension to which modular and incremental improvements can be made.  
 
 ```javascript
 /**
@@ -170,19 +170,19 @@ let logic = {
     highlightText: surfaceFormHighlight,
 }
 ```
-As we felt some sections of the pipeline were especially 'swapable', we implemented a logic object that allows one to easily change the behavior at those sections. Care must still be take to ensure inputs to each section are satisfied. However this design choice came in very handy. During development/debugging the UI, we'd often swap expensive API call implementations for dummy implementations. 
+As we felt some sections of the pipeline were especially 'swapable', we implemented a logic object that allows one to easily change the behavior at those sections. Care must still be taken to ensure inputs to each section are satisfied. However, this design choice came in very handy. During development/debugging the UI, we'd often swap expensive API call implementations for dummy implementations. 
 
 ## The Ghostbox Approach 
-One major challenge for the extension approach was the fact that moden social media applications like reddit use reactive front end frameworks like [React](https://react.dev/) to implement their UIs. Simple HTML input fields or textareas aren't as common, and modifying the contents of these textboxes runs the risk of breaking application behavior. 
+One major challenge for the extension approach was the fact that modern social media applications like Reddit use reactive front end frameworks like [React](https://react.dev/) to implement their UIs. Simple HTML input fields or textareas aren't as common, and modifying the contents of these textboxes runs the risk of breaking application behavior. 
 
-Our inital thought, to simply wrap text we'd like to highlight in `<span></span>` elements with appropriate styling and `onmousehover` events was therefore a no-go. 
+Our initial thought, to simply wrap text we'd like to highlight in `<span></span>` elements with appropriate styling and `onmousehover` events was therefore a no-go. 
 
 ### Ghostboxes
-To refrain from editing the content of a textbox while still delivering our functionality we opted to create a hidden 'ghost' textbox with the exact same style and position as the one the user was typing in. This 'ghostbox' would stay underneath the page via `z-index` and 'haunt' the textbox on the layers above. 
+To refrain from editing the content of a textbox while still delivering our functionality, we opted to create a hidden 'ghost' textbox with the exact same style and position as the one the user was typing in. This 'ghostbox' would stay underneath the page via `z-index` and 'haunt' the textbox on the layers above. 
 
 We recreate the content of the commentbox in the ghostbox and create '<span></span>'s for sections we want to highlight. Though ghostbox spans don't bother with coloring, since they're 'underneath' the rest of the page, they're never seen by the user. Their focus is on maintaining their position with the corresponding elements in the commentbox above.
 
-Once the `<span></span>`'s are created we create `Highlight` objects for each span. Each `Highlight` object, in turn, has one or more `Zones`.
+Once the `<span></span>`'s are created, we create `Highlight` objects for each span. Each `Highlight` object, in turn, has one or more `Zones`.
 
 ```javascript
 class GhostBox{
@@ -227,39 +227,39 @@ class GhostBox{
 
 ![3 zone highlight](/img/3-zone-highlight.png)
 
-In the above example, 3 zones (rectangles) have to be drawn to cover the 'single' highlight. Zones are the actual visual element that you see ontop of the text. They are just `divs` with a high `z-index`, a `0.5` opacity, and the highlight color. 
+In the above example, 3 zones (rectangles) have to be drawn to cover the 'single' highlight. Zones are the actual visual element that you see on top of the text. They are just `divs` with a high `z-index`, a `0.5` opacity, and the highlight color. 
 
 The ghostbox and the zones are positioned absolutely onto the screen, with the former pinned against the boundingClientRectangle of the comment box, and the latter pinned against the corresponding span's `clientRects`.
 
-As the user scrolls, we update the zones and ghostbox's position to keep eveything where it's supposed to be.
+As the user scrolls, we update the zones and ghostbox's position to keep everything where it's supposed to be.
 
 ### The Snippet System
 
-The snippet system is our attempt at partitioning text as the user types for live feedback. It allows us to consider only parts of a comment we haven't yet processed. As a snippet is typed, we check that it is long enough, and relevant for misinformation checking. If so we process it and create spans/highlights/zones as necessary. 
+The snippet system is our attempt at partitioning text as the user types for live feedback. It allows us to consider only parts of a comment we haven't yet processed. As a snippet is typed, we check that it is long enough, and relevant for misinformation checking. If so, we process it and create spans/highlights/zones as necessary. 
 
-Below is a GIF of the snippet system in action, no actualy relevance checking or misinfo checking is happening here. Informly is also set to process input after 1 second from the last update. The best user experience is achieved when the delay before scan is a good bit longer than that (try 2-5 seconds in the options), however it's easier to see the snippet system in action with a lower delay.
+Below is a GIF of the snippet system in action; no actual relevance checking or misinformation checking is happening here. Informly is also set to process input after 1 second from the last update. The best user experience is achieved when the delay before scan is a good bit longer than that (try 2-5 seconds in the options), however it's easier to see the snippet system in action with a lower delay.
 
 ![Snippet system gif](/img/informly.gif)
 
 ### Final Comments on UI work
 
-Though it's painful, there is a lot of complexity involved in delivering a truly seamless user experience for Informly while never touching the overlying (Reddit) application, nor inadvertedly bothering the user. 
+Though it's painful, there is a lot of complexity involved in delivering a truly seamless user experience for Informly while never touching the overlying (Reddit) application, nor inadvertently bothering the user. 
 
-The ghostboxes and the snippet system were, in retrospect, quite amibitious systems to try and implement. Sadly, there are many cases where they will choke, sometimes because Reddit's react events have modified elements in unexpected ways, other times just on account of plain old bugs. Nevertheless it was rewarding to piece them together and we hope they're stable enough to work at least a few times on your machine as well.
+The ghostboxes and the snippet system were, in retrospect, quite ambitious systems to try and implement. Sadly, there are many cases where they will choke, sometimes because Reddit's react events have modified elements in unexpected ways, other times just on account of plain old bugs. Nevertheless it was rewarding to piece them together and we hope they're stable enough to work at least a few times on your machine as well.
 
 ## Relevance, DBpedia Spotlight and Surface Forms
 As mentioned previously, we'd like to avoid bothering the user unnecessarily, and as you can see from the previous section, when one highlights a lot, one virtually highlights nothing. 
 
 To better achieve these goals we make use of the free and publically available [DBPedia Spotlight](https://www.dbpedia-spotlight.org/api) api. It provides us with a wikipedia backed entity recognition service. We make the assumption that, for there to be misinformation in a snippet, we should get at least one entity match. The portion of the text that matched a DBpedia entity, is called a 'surface form'. 
 
-In terms of relevance this is a pretty simplistic test. A more advanced approach might attempt to leverage something like Stanford CoreNLP and try to piece together a dependecy graph of the snippet. Making sure that there is at least some relation between a verb and a subject/object surface form. 
+In terms of relevance, this is a pretty simplistic test. A more advanced approach might attempt to leverage something like Stanford CoreNLP and try to piece together a dependency graph of the snippet, making sure that there is at least some relation between a verb and a subject/object surface form. 
 
-Nevertheless, by performing surface form analysis on chatGPT and focusing out highlights on terms that appear as surface forms for both the user's snippet *and* chatGPT's response we were able to highlight a lot less, in a way that still made sense.  
+Nevertheless, by performing surface form analysis on chatGPT and focusing out highlights on terms that appear as surface forms for both the user's snippet *and* chatGPT's response, we were able to highlight a lot less, in a way that still made sense.  
 
 ## ChatGPT Prompt Engineering
 We took a much more relaxed approach towards this portion of the solution. Especially once we were driven mildly insane by ghostboxes and snippets. 
 
-While we acknowledge that preventing prompt injection, and adding all the disclaimers around the effectiveness/relevance/bias/appropriateness of chatGPT responses is critical to any real world application of the technology. We felt anyone evaluating our work or attempting to build off it, was likely familiar enough with the technology to know what to expect. 
+While we acknowledge that preventing prompt injection, and adding all the disclaimers around the effectiveness/relevance/bias/appropriateness of chatGPT responses is critical to any real world application of the technology, we felt anyone evaluating our work or attempting to build off it, was likely familiar enough with the technology to know what to expect. 
 
 
 For reference the format of our chatGPT requests is shown below. 
@@ -283,16 +283,16 @@ For reference the format of our chatGPT requests is shown below.
 
 
 # Evaluation, Opportunities, and more...
-Admittedly very limited time was left for evaluation. Throughout development, the main user flow was invoked in many different ways to attempt to provide a good demo experience.
+Admittedly, very limited time was left for evaluation. Throughout development, the main user flow was invoked in many different ways to attempt to provide a good demo experience.
 
-However thought was given to the kind of scientific evalutation an Informly-like system could facilitate. Notably, we feel there is opportunity for misinformation dataset generation. A non-exhaustive list of uses for such a dataset include:
+However, thought was given to the kind of scientific evaluation an Informly-like system could facilitate. Notably, we feel there is opportunity for a misinformation dataset generation. A non-exhaustive list of uses for such a dataset include:
 
 * Evaluating the performance of chatGPT models in identifying misinformation correctly. 
     * The Informly addon could be distributed to trusted researchers who can act as 'sources of truth' accurately marking false positives.
-* Monitoring the spread of misinformation acrossn geographic regions
-    * While the prototype implements very course grained 'contient' level information as an example this could be expanded upon.
+* Monitoring the spread of misinformation across geographic regions.
+    * While the prototype implements very coarse-grained 'continent' level information as an example this could be expanded upon.
 * Determining common topics/subjects for misinformation by aggregating surface forms. 
 * Creating embeddings for pieces of misinformation and using positive and negative examples. 
     * These embeddings could then be used for zero-shot classification of ChatGPT responses, replacing the 'dumb' classifier in Informly.
 * Studying the efficacy of Informly at preventing or slowing the spread of misinformation. 
-    * Consenting/interested/qualified participants could be onboarded into double blind randomized control studies where some extension instances don't do anything at all, while others perform their normal functions. The number of times users end up actually submitting misinformation could be agregated. 
+    * Consenting/interested/qualified participants could be onboarded into double-blind randomized control studies where some extension instances don't do anything at all, while others perform their normal functions. The number of times users end up actually submitting misinformation could be aggregated. 
