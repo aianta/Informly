@@ -1,5 +1,5 @@
 ![Informly Icon](informly_icon.png) 
-<a href="https://github.com/aianta/Informly/raw/main/xpi/informly-0.1.xpi" type="application/x-xpinstall">Quick Install v0.1 XPI</a>
+<a href="https://github.com/aianta/Informly/raw/main/xpi/informly-0.1.xpi" type="application/x-xpinstall" download>Quick Install v0.1 XPI</a>
 [ Quick Install v0.1 XPI](https://github.com/aianta/Informly/raw/main/xpi/informly-0.1.xpi) 
 
 In Firefox click Extensions -> Manage Extensions -> Gear Icon -> Install Add-on From File.. then choose the XPI file above. 
