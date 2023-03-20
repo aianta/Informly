@@ -133,6 +133,19 @@ This should complete Informly installation. Head over to http://www.reddit.com a
 
 >NOTE: Informly works best in reddit's Markdown comment editor. If using the default/'fancy' editor we recommend only typing on the first line/not hitting enter to introduce paragraph breaks. 
 
+# Usage & Troubleshooting
+
+The addon will only activate on `www.reddit.com`, once you navigate to a particular thread, open the developer tools by hitting `F12` on your keyboard. You should notice informly output to `console.log()` when you start typing in the comment box. 
+
+If you're not getting highlighted text when writing clearly misinformed things, it's possible DBPedia spotlight isn't picking up on the entities in your misinformation. This can be confirmed if you find `Text not relevant!` messages in the developer tools console. Try capitalizing proper nouns. 
+
+Some entities that work fairly reliably are: NASA, Moscow, Earth, mass media. 
+
+>In retrosepct the `0.5` confidence value sent to the API should be an option.
+
+>Being a prototype and 'proof-of-concept' the addon can be a bit finiky. Details on why can be found in the [implementation](#implementation-details) section. 
+
+
 # Implementation details
 
 The highlevel idea of Informly: 'to highlight misinformation *before* it gets posted' can have some unpleasant 'panpoticon-esque' implications. We believe it's important to tread with caution in this direction. Part of the motivation behind Informly was to attempt to demonstrate value to users in the process of slowing down misinformation. That is, the individual should benefit from Informly's usage.
