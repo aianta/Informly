@@ -24,12 +24,18 @@ function loadoptions(){
     })
 }
 
-loadoptions().then(options=>{
+$('document').ready(()=>loadoptions().then(options=>{
 
     if(!options._openai_key || !options._openai_url){
         alert("Critical options not set, please fill in all Informly extension options not specified as optional.")
         return //The fun ends here in that case.
     }
+
+    /**
+     * Reddit's textbox doesn't really take up space until you type in in. We need it to 'inflate' before we can haunt it with our ghostbox.
+     */
+    $('[class="notranslate public-DraftEditor-content"][role="textbox"][spellcheck="true"][contenteditable="true"][style="outline: none; user-select: text; white-space: pre-wrap; overflow-wrap: break-word;"]')[0].innerText = 'i'
+    $('[class="notranslate public-DraftEditor-content"][role="textbox"][spellcheck="true"][contenteditable="true"][style="outline: none; user-select: text; white-space: pre-wrap; overflow-wrap: break-word;"]')[0].innerText = ''
 
     //Create the informly context for the page
     let ctx = {}
@@ -37,7 +43,7 @@ loadoptions().then(options=>{
     //SETUP EVENT LISTENERS
 
     // Detect typing in a textbox.
-    document.addEventListener('keydown', (event)=>handleTextboxInput(event, options, ctx))
+    document.addEventListener('input', (event)=>handleTextboxInput(event, options, ctx))
 
     // Register listener for 'informly-show', triggered when a user hovers over higlighted misinformation.
     document.addEventListener('informly-show', (event)=>handleInformlyShow(event, options, ctx))
@@ -54,7 +60,7 @@ loadoptions().then(options=>{
     // Register listener for page scrolling, informly needs to move the ghostbox around for things to work properly
     document.addEventListener('scroll', (event)=>handleScroll(event, options, ctx))
 
-    // Register listener for 'beforeunload', informly needs to clean up if the user navigates away
+    // Register a work around for 'beforeunload', informly needs to clean up if the user navigates away
     oldHref = document.location.href
     const observer = new MutationObserver(mutations=>{
         mutations.forEach(()=>{
@@ -72,16 +78,16 @@ loadoptions().then(options=>{
         })
     })
     observer.observe(document.querySelector('body'), {childList:true,subtree:true})
-    addEventListener('beforeunload', (event)=>{
-        console.log('unload event!')
-        
-    })
 
     // Register listener for 'paste' and disable the event. It messes with too many things. TODO: support copy paste.
-    document.addEventListener('paste', (event)=>{event.preventDefault(); console.log('Sorry, paste breaks Informly.')})
+    // document.addEventListener('paste', (event)=>{event.preventDefault(); console.log('Sorry, paste breaks Informly.')})
     console.log('Informly loaded!')
 
 })
+
+)
+
+
 
 // HANDLERS
 
@@ -418,12 +424,12 @@ function checkTargetRecursively(event,ctx){
         }
     }
 
-    //Ignore events for the following keys
-    let ignore = [91,92,112,113,114,115,116,117,118,119,120,121,122,123,144,145,182,183,44,45,36,35,34,33,20,19,18,17,16,13]
-    if (ignore.includes(event.keyCode)){
-        return false
-    }
-    console.log('got keyCode:', event.keyCode)
+    // //Ignore events for the following keys
+    // let ignore = [91,92,112,113,114,115,116,117,118,119,120,121,122,123,144,145,182,183,44,45,36,35,34,33,20,19,18,17,16,13]
+    // if (ignore.includes(event.keyCode)){
+    //     return false
+    // }
+    // console.log('got keyCode:', event.keyCode)
 
     return hasTextboxRole(event.target)
     

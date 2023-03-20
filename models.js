@@ -202,7 +202,7 @@ class GhostBox{
         this.textbox.style['padding-bottom'] = pb
         this.textbox.style['padding-left'] = pl
         this.textbox.style['padding-right'] = pr
-        this.textbox.style['white-space'] = 'pre-wrap'
+        this.textbox.style['white-space'] = 'pre-wrap' //Important!
 
         // Define highlights 
         this.highlights = []
