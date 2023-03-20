@@ -90,6 +90,8 @@ From the same popup, users are able to download their personal dataset. This is 
 ### Quick Install
 [ Quick Install v0.1](https://github.com/aianta/Informly/raw/main/xpi/informly-0.1.xpi)
 
+In Firefox click Extensions -> Manage Extensions -> Gear Icon -> Install Add-on From File.. then choose the XPI file above. 
+
 **If Informly doesn't kick in right away, once you're on a thread with a comment box available, refresh the page and try entering some content again.**
 
 >NOTE: Informly works best in reddit's Markdown comment editor. If using the default/'fancy' editor we recommend only typing on the first line/not hitting enter to introduce paragraph breaks. 
